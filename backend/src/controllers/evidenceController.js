@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const cryptoService = require('../services/cryptoService');
 const storage = require('../services/storageService');
@@ -5,6 +6,7 @@ const hashService = require('../services/hashService');
 const chain = require('../services/chainService');
 const audit = require('../services/auditService');
 const logger = require('../lib/logger');
+const env = require('../config/env');
 const { asyncHandler, notFound, badRequest } = require('../lib/errors');
 
 // Binds ciphertext to the specific evidence row via AES-GCM's AAD (see
@@ -387,6 +389,71 @@ const reanchor = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /api/evidence/:id/tamper — ADMIN, development/demo builds only.
+ *
+ * The tamper-detection beat of the demo used to be provable only by a CLI
+ * script that edited disk and database directly. This makes the SAME act
+ * clickable: it substitutes the stored exhibit with DIFFERENT plaintext,
+ * re-encrypted under the real key and bound to the same row id, and updates
+ * the row's crypto envelope to match. The file still decrypts cleanly — AES
+ * authenticates it, because it really was produced under this key for this
+ * row — so the next /verify is caught by the digest comparison, exactly the
+ * hard case the e2e script documents.
+ *
+ * This deliberately breaks an exhibit. That is why it is ADMIN-only, audited
+ * loudly, and refused entirely when env.tamperDemoEnabled is off (production
+ * default). It exists for one screen in front of judges; nothing else.
+ */
+const tamper = asyncHandler(async (req, res) => {
+  if (!env.tamperDemoEnabled) throw notFound('Evidence'); // hide the route
+
+  const { id } = req.valid.params;
+  const { rows } = await pool.query(`SELECT * FROM evidence WHERE id = $1`, [id]);
+  const ev = rows[0];
+  if (!ev) throw notFound('Evidence');
+
+  const forged = Buffer.from(
+    `ARGUS demo — this exhibit was substituted on disk at ${new Date().toISOString()} by `
+    + `${req.user.email || `user#${req.user.id}`}.\n`
+    + `The sealed digest on-chain belongs to the ORIGINAL file; this one must fail verification.\n`
+    + `nonce ${crypto.randomBytes(16).toString('hex')}\n`
+  );
+
+  const { ciphertext, iv, authTag, keyVersion } = cryptoService.encrypt(forged, aadFor(ev.id));
+  const storedName = await storage.write(ciphertext);
+  const oldPath = ev.encrypted_path;
+
+  try {
+    await pool.query(
+      `UPDATE evidence SET encrypted_path=$2, iv=$3, auth_tag=$4, key_version=$5, size_bytes=$6
+        WHERE id=$1 RETURNING id`,
+      [id, storedName, iv, authTag, keyVersion, forged.length]
+    );
+  } catch (err) {
+    await storage.remove(storedName).catch(() => {});
+    throw err;
+  }
+  await storage.remove(oldPath).catch((rmErr) =>
+    logger.error({ err: rmErr.message, file: oldPath }, 'old ciphertext could not be removed after demo tamper'));
+
+  await audit.log({
+    actorId: req.user.id,
+    action: 'EVIDENCE_TAMPERED_DEMO',
+    entityType: 'evidence',
+    entityId: id,
+    metadata: { title: ev.title, sealed_hash: ev.sha256_hash },
+    ipAddress: audit.clientIp(req),
+  });
+
+  res.json({
+    tampered: true,
+    note: 'Stored exhibit replaced with different content. Verify it now — the digest comparison will fail, and the failure will be recorded on-chain.',
+    computed_hash: hashService.sha256(forged),
+    stored_hash: ev.sha256_hash,
+  });
+});
+
+/**
  * POST /api/evidence/integrity-sweep — ADMIN.
  *
  * Reactive verification (verify(), above) only runs when someone asks about
@@ -440,6 +507,6 @@ const retryFailedAnchors = asyncHandler(async (req, res) => {
 
 module.exports = {
   list, upload, verify, history, download, chainStatus, chainTransactions, reanchor,
-  integritySweep, retryFailedAnchors,
+  integritySweep, retryFailedAnchors, tamper,
   contentDisposition,
 };

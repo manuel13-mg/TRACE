@@ -19,7 +19,7 @@ const assert = require('node:assert/strict');
 const normalize = require('../src/services/normalize');
 const {
   Graph, pagerank, betweenness, influenceScores, labelPropagation,
-  shortestPath, connectedComponents, bridgePathsThrough,
+  shortestPath, connectedComponents, bridgePathsThrough, simulateRemoval,
 } = require('../src/services/graphAlgos');
 const { canonical, canonicalDistrict, isRollup, isHeader } = require('../src/services/stateNames');
 const { threatIndex, levelFor } = require('../src/controllers/dashboardController');
@@ -151,6 +151,69 @@ test('connectedComponents reports fragmentation when the bridge is removed', () 
   const after = connectedComponents(g, { exclude: 'bridge' });
   assert.equal(after.length, 2, 'removing the bridge must split it in two');
   assert.deepEqual(after.map((c) => c.size).sort(), [3, 3]);
+});
+
+test('Graph.clone is a copy, not a view', () => {
+  const g = bowtie();
+  const c = g.clone();
+  assert.equal(c.size, g.size);
+  assert.equal(c.edgeCount, g.edgeCount);
+
+  // Mutating the copy must leave the original untouched — the property the
+  // Fragmentation Simulator's "no mutation" guarantee rests on.
+  c.remove('bridge');
+  assert.equal(c.size, g.size - 1, 'the copy should lose the node');
+  assert.equal(g.has('bridge'), true, 'the original must keep it');
+  assert.equal(connectedComponents(g).length, 1, 'the original stays connected');
+  assert.equal(connectedComponents(c).length, 2, 'the copy fragments');
+});
+
+test('simulateRemoval fragments the bowtie and names a new key player', () => {
+  const g = bowtie();
+  const nodes = new Map([...g.nodes()].map((id) => [id, { id, label: id, type: 'PERSON' }]));
+  const edges = [];
+  for (const v of g.nodes()) {
+    for (const w of g.neighbors(v)) {
+      if (v < w) edges.push({ id: `${v}-${w}`, source: v, target: w, type: 'X', weight: 1 });
+    }
+  }
+
+  const result = simulateRemoval(g, nodes, edges, ['bridge']);
+  assert.equal(result.error, undefined);
+  assert.equal(result.after.fragment_count, 2, 'removing the bridge must split the bowtie in two');
+  assert.deepEqual(result.after.fragments.map((c) => c.length).sort(), [3, 3]);
+  // Largest fragment 3 of the original 7-node organisation = 42.9%. The
+  // denominator is the ORIGINAL total, arrest included — that is what
+  // "resilience as a percentage of the original organisation" means.
+  assert.equal(result.after.resilience, 42.9);
+  assert.equal(result.after.resilience_delta, -57.1);
+  assert.notEqual(result.after.top.id, 'bridge', 'the removed node cannot be the new key player');
+  assert.equal(result.after.top.id, result.before.top.id || result.after.top.id);
+  assert.ok(result.after.nodes.every((n) => n.id !== 'bridge'), 'removed nodes must not appear after');
+  assert.ok(result.before.nodes.some((n) => n.id === 'bridge'), 'before keeps the target visible');
+
+  // The stored graph is untouched — this is the whole point of the feature.
+  assert.equal(g.has('bridge'), true);
+  assert.equal(connectedComponents(g).length, 1);
+});
+
+test('simulateRemoval reports unknown nodes instead of guessing', () => {
+  const g = bowtie();
+  const nodes = new Map([...g.nodes()].map((id) => [id, { id, label: id, type: 'PERSON' }]));
+  const result = simulateRemoval(g, nodes, [], ['ghost']);
+  assert.equal(result.error, 'unknown_node');
+  assert.deepEqual(result.missing, ['ghost']);
+});
+
+test('simulateRemoval never mutates the graph it is handed', () => {
+  const g = bowtie();
+  const nodes = new Map([...g.nodes()].map((id) => [id, { id, label: id, type: 'PERSON' }]));
+  const edges = [];
+  simulateRemoval(g, nodes, edges, ['bridge', 'a1']);
+  assert.equal(g.size, 7, 'the original graph must be byte-for-byte unchanged');
+  assert.equal(g.has('bridge'), true);
+  assert.equal(g.has('a1'), true);
+  assert.equal(connectedComponents(g).length, 1);
 });
 
 test('bridgePathsThrough only claims pairs it actually joins', () => {

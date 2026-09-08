@@ -30,6 +30,24 @@ class Graph {
   degree(n) { return (this.adj.get(n) || new Set()).size; }
   get size() { return this.adj.size; }
   get edgeCount() { let s = 0; for (const v of this.adj.values()) s += v.size; return s / 2; }
+
+  /**
+   * A deep-enough copy for simulation work. Adjacency is rebuilt, never shared,
+   * so mutating the copy cannot reach the original. Edges are added once per
+   * pair even though `add` is symmetric — harmless, and it keeps this a single
+   * pass over the original structure.
+   */
+  clone() {
+    const g = new Graph();
+    for (const [v, nbrs] of this.adj) for (const w of nbrs) g.add(v, w);
+    return g;
+  }
+
+  /** Deletes a node and every edge incident to it. */
+  remove(id) {
+    this.adj.delete(id);
+    for (const nbrs of this.adj.values()) nbrs.delete(id);
+  }
 }
 
 /** Undirected PageRank by power iteration. */
@@ -172,6 +190,147 @@ function connectedComponents(g, { exclude = null } = {}) {
 }
 
 /**
+ * Network fragmentation simulation — the innovation layer.
+ *
+ * Given a graph, its hydrated node payloads and the ids to remove, returns
+ * everything the Fragmentation Simulator page needs: the before/after subgraph
+ * of the affected organisation, the fragment list, the resilience delta, and
+ * who becomes the new top-influence node after the removal.
+ *
+ * Pure by construction — it never mutates `g` (it clones before removing), so
+ * the caller can hand it the live cached graph without endangering it. That is
+ * the load-bearing property of the whole feature: an analyst simulates an
+ * arrest, sees the outcome, and the stored graph is untouched.
+ *
+ * Scoping is deliberately the same as `why()`'s removal test: the affected
+ * organisation is the connected component(s) that contained the removed
+ * node(s), and everything reported — fragments, resilience, key player — is
+ * about that organisation, not about the 1,200-node national graph. Removing a
+ * node from a graph that already has several disconnected pieces must not
+ * report fragments that have nothing to do with the removal.
+ */
+function simulateRemoval(g, nodes, edges, nodeIds, { topK = 5 } = {}) {
+  const missing = nodeIds.filter((id) => !g.has(id));
+  if (missing.length) return { error: 'unknown_node', missing };
+
+  const removedSet = new Set(nodeIds);
+
+  // Work on a copy. This is the whole point of the feature: the simulation
+  // must not be able to corrupt the picture the Explorer is rendering.
+  const rest = g.clone();
+  for (const id of removedSet) rest.remove(id);
+
+  const describe = (id) => {
+    const n = nodes.get(id);
+    return n
+      ? { id, label: n.label, type: n.type, cluster: n.cluster ?? null }
+      : { id, label: id, type: 'UNKNOWN' };
+  };
+
+  // --- the affected organisation -----------------------------------------
+  // Union of the components that contained the removed nodes. For a single
+  // removal this is one connected piece; for a combined strike the two targets
+  // are normally in the same piece, and if they are not, the union is reported
+  // honestly rather than pretending the strike hit one organisation.
+  const beforeComponents = connectedComponents(g);
+  const target = new Set();
+  for (const id of removedSet) {
+    const comp = beforeComponents.find((c) => c.has(id));
+    if (comp) for (const n of comp) target.add(n);
+  }
+  const targetSize = target.size;
+
+  const targetComps = beforeComponents.filter((c) => [...c].some((n) => target.has(n)));
+  const largestBefore = Math.max(...targetComps.map((c) => c.size), 0);
+
+  // Fragments: the pieces of the remaining graph that overlap the target.
+  const afterComponents = connectedComponents(rest);
+  const fragments = afterComponents.filter((c) => [...c].some((n) => target.has(n)));
+  const largestAfter = Math.max(...fragments.map((c) => c.size), 0);
+  const isolatedNodes = fragments.filter((c) => c.size === 1).length;
+
+  // Resilience: the largest connected piece as a percentage of the original
+  // organisation. 100% means "still one organisation"; a collapse towards
+  // 1/n means "n disconnected pieces". Rounded to one decimal — this number is
+  // read aloud in a demo, and 61.428571% is noise, not precision.
+  const pct = (size) => (targetSize ? Math.round((size / targetSize) * 1000) / 10 : 0);
+  const beforeResilience = pct(largestBefore);
+  const afterResilience = pct(largestAfter);
+  const resilienceDelta = Math.round((afterResilience - beforeResilience) * 10) / 10;
+
+  // --- who takes over ------------------------------------------------------
+  // Influence is recomputed over the REMAINING graph — the same maths as the
+  // analytics job, just with the node(s) gone. The key player is picked from
+  // the fragments only (complaints excluded, as in `why()`: a complaint node
+  // bridges whatever it was filed in and would drown the people).
+  const isEntity = (id) => nodes.get(id)?.type !== 'COMPLAINT';
+  const { influence } = influenceScores(rest);
+  const rankedAfter = [...fragments.flatMap((c) => [...c])]
+    .filter(isEntity)
+    .map((id) => ({ ...describe(id), influence: Math.round(influence.get(id) || 0) }))
+    .sort((a, b) => (b.influence - a.influence) || (a.id < b.id ? -1 : 1));
+
+  const influenceBefore = influenceScores(g).influence;
+  const rankedBefore = [...target]
+    .filter(isEntity)
+    .map((id) => ({ ...describe(id), influence: Math.round(influenceBefore.get(id) || 0) }))
+    .sort((a, b) => (b.influence - a.influence) || (a.id < b.id ? -1 : 1));
+
+  const topBefore = rankedBefore[0] || null;
+  const topAfter = rankedAfter[0] || null;
+  const surfaced = Boolean(topAfter && topBefore && topAfter.id !== topBefore.id);
+
+  // --- subgraph payloads for the canvas -----------------------------------
+  const induced = (keep) => edges.filter((e) => keep.has(e.source) && keep.has(e.target));
+  const hydrate = (ids) => ids.map((id) => nodes.get(id)).filter(Boolean);
+
+  // Before shows the organisation WITH the targets still in it, so the canvas
+  // can draw what is about to be removed; after shows the fragments, each node
+  // tagged with which fragment it fell into.
+  const beforeKeep = new Set([...target, ...removedSet]);
+  const afterKeep = new Set(fragments.flatMap((c) => [...c]));
+  const fragmentIndex = new Map();
+  fragments.forEach((c, i) => { for (const id of c) fragmentIndex.set(id, i); });
+
+  const before = {
+    nodes: hydrate([...beforeKeep]),
+    edges: induced(beforeKeep),
+    resilience: beforeResilience,
+    top: topBefore,
+  };
+  const after = {
+    nodes: hydrate([...afterKeep]).map((n) => ({ ...n, fragment: fragmentIndex.get(n.id) })),
+    edges: induced(afterKeep),
+    fragments: fragments.map((c) => [...c]),
+    fragment_count: fragments.length,
+    largest_fragment: largestAfter,
+    isolated_nodes: isolatedNodes,
+    resilience: afterResilience,
+    resilience_delta: resilienceDelta,
+    top: topAfter ? { ...topAfter, surfaced } : null,
+  };
+
+  const clusterKeys = [...new Set(
+    [...before.nodes].map((n) => n.cluster).filter(Boolean)
+  )];
+
+  return {
+    removed: nodeIds.map(describe),
+    scope: { target_size: targetSize, cluster_keys: clusterKeys },
+    before,
+    after,
+    summary: {
+      narrative: fragments.length
+        ? `Network resilience dropped from ${beforeResilience}% to ${afterResilience}%. `
+          + `New key connector: ${topAfter?.label ?? 'none'}.`
+        : `${describe(nodeIds[0]).label} was not holding anything together — removing ${nodeIds.length === 1 ? 'it' : 'them'} fragments nothing.`,
+      takeover: surfaced,
+      coordinated: nodeIds.length > 1,
+    },
+  };
+}
+
+/**
  * Concrete routes that pass THROUGH `via` — the evidence behind a betweenness
  * score.
  *
@@ -302,5 +461,5 @@ function labelPropagation(g, { iterations = 30 } = {}) {
 
 module.exports = {
   Graph, pagerank, betweenness, normalise, influenceScores, labelPropagation,
-  shortestPath, connectedComponents, bridgePathsThrough,
+  shortestPath, connectedComponents, bridgePathsThrough, simulateRemoval,
 };

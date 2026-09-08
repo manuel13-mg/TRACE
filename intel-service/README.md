@@ -1,4 +1,4 @@
-# ARGUS — intelligence service
+# TRACE — Threat Relationship Analysis and Connection Engine intelligence service
 
 FastAPI on `:8000`. Owns entity extraction and the Neo4j projection.
 
@@ -42,14 +42,14 @@ both sides turn that into a failing test instead of a mystery.
 
 ## What it implements, and what it deliberately does not
 
-| Route | |
-|---|---|
-| `GET /health` | liveness + capability (spaCy loaded? Neo4j connected? node count) |
-| `POST /extract` | **the demo-critical path** — every identifier in a narrative |
-| `POST /ingest` | merge one complaint into Neo4j |
-| `POST /ingest/bulk` | rebuild the projection from a batch |
-| `POST /analytics/run` | **501** — delegated to Express |
-| `GET /graph/*` | **501** — delegated to Express |
+| Route                 |                                                                   |
+| --------------------- | ----------------------------------------------------------------- |
+| `GET /health`         | liveness + capability (spaCy loaded? Neo4j connected? node count) |
+| `POST /extract`       | **the demo-critical path** — every identifier in a narrative      |
+| `POST /ingest`        | merge one complaint into Neo4j                                    |
+| `POST /ingest/bulk`   | rebuild the projection from a batch                               |
+| `POST /analytics/run` | **501** — delegated to Express                                    |
+| `GET /graph/*`        | **501** — delegated to Express                                    |
 
 The 501s are a documented boundary, not an omission. Express already computes
 PageRank, Brandes betweenness, connected components and label-propagation
@@ -62,7 +62,7 @@ the single claim this whole project rests on.
 `intelClient.js` reads 501 as a definitive capability answer rather than a
 failure, so it falls back to the proven path and it never counts against the
 circuit breaker. That distinction matters: without it, three dashboard loads
-would trip the breaker and `/extract` — which this service *does* implement —
+would trip the breaker and `/extract` — which this service _does_ implement —
 would start failing fast for a service that is perfectly healthy.
 
 ---

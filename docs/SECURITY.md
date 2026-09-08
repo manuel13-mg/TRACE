@@ -1,4 +1,4 @@
-# ARGUS — Security Architecture & Threat Model
+# TRACE — Security Architecture & Threat Model
 
 This document exists to answer one question precisely: **why should anyone
 trust that an ARGUS exhibit hasn't been tampered with, and who could break
@@ -13,7 +13,7 @@ choice was made.
   key breaks GCM's confidentiality guarantee outright, so this is non-negotiable.
 - **AAD (associated authenticated data)** binds every ciphertext to its own
   evidence row (`evidence:<id>`). Without this, a valid `(ciphertext, iv,
-  authTag)` triple copied wholesale from one evidence row onto another still
+authTag)` triple copied wholesale from one evidence row onto another still
   decrypts and authenticates cleanly — GCM only proves "this ciphertext came
   from this key and this IV," not "this ciphertext belongs to this row." AAD
   closes that: decrypting evidence row A's data using row B's id as AAD fails
@@ -38,13 +38,13 @@ choice was made.
   again).
 - **Key rotation is versioned, not destructive.** Every evidence row stores
   `key_version` — the id of the key that sealed it. `EVIDENCE_ENCRYPTION_KEY`
-  + `EVIDENCE_ENCRYPTION_KEY_VERSION` is the *active* key, used for all new
-  encryption. `EVIDENCE_ENCRYPTION_KEY_PREVIOUS` holds retired keys
-  (`version:hexkey`, comma-separated) — decrypt-only, so rotating the active
-  key never strands exhibits sealed under an older one. `scripts/rotate-evidence-key.js`
-  re-encrypts old exhibits onto the active key on demand (verifying the
-  plaintext digest before writing anything back), so a retired key can
-  eventually be deleted from `EVIDENCE_ENCRYPTION_KEY_PREVIOUS` entirely.
+  - `EVIDENCE_ENCRYPTION_KEY_VERSION` is the _active_ key, used for all new
+    encryption. `EVIDENCE_ENCRYPTION_KEY_PREVIOUS` holds retired keys
+    (`version:hexkey`, comma-separated) — decrypt-only, so rotating the active
+    key never strands exhibits sealed under an older one. `scripts/rotate-evidence-key.js`
+    re-encrypts old exhibits onto the active key on demand (verifying the
+    plaintext digest before writing anything back), so a retired key can
+    eventually be deleted from `EVIDENCE_ENCRYPTION_KEY_PREVIOUS` entirely.
 - **Known limitation:** this is a single flat symmetric key per version, held
   in an env var — not a KMS/HSM-backed envelope scheme. For a hackathon build
   this is a deliberate scope decision, not an oversight; a production
@@ -81,7 +81,7 @@ permanently. A tampered exhibit that stopped matching leaves a mark nobody
 can remove, on the same terms as a clean pass. `backend/scripts/evidence-e2e.js`
 proves this end-to-end against a live chain: upload → verify (pass) → tamper
 → verify (fails, permanently recorded) → a second, harder tamper (swap
-*another* exhibit's entire crypto envelope onto this row) → still caught, via
+_another_ exhibit's entire crypto envelope onto this row) → still caught, via
 the AAD mismatch this time rather than a hash mismatch.
 
 **One honest limitation:** every on-chain transaction is submitted by a
@@ -159,4 +159,5 @@ cd ../blockchain && npx hardhat test    # 21 contract tests
 
 `evidence-e2e.js` is the single most convincing artifact here — it runs the
 full tamper-detection story against a live chain and fails loudly (exit code
-1) if the claims in this document stop being true.
+
+1. if the claims in this document stop being true.

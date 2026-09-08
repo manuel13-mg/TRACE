@@ -1,4 +1,4 @@
-# ARGUS — Complete Project Document
+# TRACE — Threat Relationship Analysis and Connection Engine
 
 **AI-Powered Criminal Network Analysis System**
 Smart India Hackathon 2026 · Problem Statement **SIH26189**
@@ -17,18 +17,19 @@ Theme: Blockchain & Cybersecurity · Organisation: **Ministry of Home Affairs (M
 
 ## §A. Identity
 
-| | |
-|---|---|
-| **Name** | ARGUS |
-| **Problem statement** | SIH26189 — AI-Powered Criminal Network Analysis System |
-| **Theme** | Blockchain & Cybersecurity |
-| **Organisation** | Ministry of Home Affairs, Government of India |
-| **Team** | 3 developers |
-| **Runway** | 5 days to demo |
-| **Repo** | `SIH 21689/` (fresh; the earlier TRINETRA-X project is scrapped) |
+|                       |                                                                  |
+| --------------------- | ---------------------------------------------------------------- |
+| **Name**              | TRACE                                                            |
+| **Expansion**         | Threat Relationship Analysis and Connection Engine               |
+| **Problem statement** | SIH26189 — AI-Powered Criminal Network Analysis System           |
+| **Theme**             | Blockchain & Cybersecurity                                       |
+| **Organisation**      | Ministry of Home Affairs, Government of India                    |
+| **Team**              | 3 developers                                                     |
+| **Runway**            | 5 days to demo                                                   |
+| **Repo**              | `SIH 21689/` (fresh; the earlier TRINETRA-X project is scrapped) |
 
-ARGUS is named for the hundred-eyed watchman of Greek myth — the system sees
-every complaint at once, which is exactly what a human investigator cannot do.
+TRACE is designed to follow relationships across complaints and expose the
+connections that a human investigator cannot see at scale.
 
 ## §B. The problem
 
@@ -89,13 +90,13 @@ is genuinely live and what is computed from seeded data.
 
 ## §D. Users
 
-| User | What they need from ARGUS |
-|---|---|
+| User                                | What they need from ARGUS                                                          |
+| ----------------------------------- | ---------------------------------------------------------------------------------- |
 | **Cyber Crime Police Investigator** | Find every complaint linked to the one on their desk; identify who to arrest first |
-| **MHA Analyst** | National-level view of which networks are growing and where |
-| **CERT-In / State Cyber Cell** | Cross-state correlation; early warning on emerging scam patterns |
-| **Financial Intelligence Unit** | Trace laundering chains from victim account to cash-out |
-| **Investigation Administrator** | Assign cases, manage access, prove audit integrity |
+| **MHA Analyst**                     | National-level view of which networks are growing and where                        |
+| **CERT-In / State Cyber Cell**      | Cross-state correlation; early warning on emerging scam patterns                   |
+| **Financial Intelligence Unit**     | Trace laundering chains from victim account to cash-out                            |
+| **Investigation Administrator**     | Assign cases, manage access, prove audit integrity                                 |
 
 All five investigate **networks**, never isolated cases. That single fact drives
 every UI decision in this project.
@@ -103,10 +104,12 @@ every UI decision in this project.
 ## §E. Feature catalogue
 
 ### 1. Login
+
 Authentication gate. Dark, ambient India-at-night canvas background. Demo
 accounts are seeded — see §P.
 
 ### 2. Dashboard — "Mission Control"
+
 National cybercrime intelligence at a glance. Should feel like a cyber command
 centre, not an admin panel.
 
@@ -120,6 +123,7 @@ centre, not an admin panel.
 - **Investigation Timeline** — condensed audit stream
 
 ### 3. Criminal Network Explorer ⭐
+
 **The project's centrepiece.** Interactive force-directed graph of the entire
 criminal network.
 
@@ -133,37 +137,44 @@ Location · Complaint · Person
 - "Highlight mastermind" pulses the top-ranked node
 
 ### 4. Complaint Intelligence
+
 Complaint detail page. Victim info, scam category, the narrative with
 **extracted entities highlighted inline**, linked complaints with shared-entity
 counts, AI confidence per extraction, and the suggested criminal cluster.
 
 ### 5. Geo Intelligence
+
 Interactive India map: crime hotspots, cluster density, state-wise statistics,
 and interstate crime routes drawn as arcs.
 
 ### 6. Money Flow Analysis
+
 Sankey diagram tracing the laundering chain:
 **victim account → mule accounts → intermediate wallets → crypto exchange → cash-out.**
 Explains visually what a spreadsheet cannot.
 
 ### 7. Threat Feed
+
 Live AI-generated investigation alerts, severity-filtered.
-Examples: *"New wallet linked to known scam ring"* · *"Same IP seen in 14
-complaints"* · *"Device fingerprint reused across states"* · *"Telegram handle
-matched previous investigation."*
+Examples: _"New wallet linked to known scam ring"_ · _"Same IP seen in 14
+complaints"_ · _"Device fingerprint reused across states"_ · _"Telegram handle
+matched previous investigation."_
 Severity: `CRITICAL` · `HIGH` · `MEDIUM` · `LOW`
 
 ### 8. Investigation Timeline
+
 Chronological audit of every investigation event — complaint received, evidence
 uploaded, wallet linked, cluster recomputed, investigator assigned, evidence
 verified. Reads directly off the append-only `audit_logs` table.
 
 ### 9. Evidence Locker
+
 Blockchain-backed evidence verification. Files are stored encrypted off-chain;
 the chain holds only the SHA-256 digest, timestamp, case reference, registrar
 identity, and the full verification history.
 
 ### 10. Admin
+
 User management, cluster recompute trigger, and live service health for all
 four components.
 
@@ -215,31 +226,31 @@ These are what let three people work in parallel without collisions. **Do not vi
 
 ### Degradation rules — non-negotiable
 
-| If this is down | Then |
-|---|---|
-| FastAPI | Express serves entities already in Postgres; graph pages show last-known cluster data behind a "live analysis unavailable" banner. Nothing throws. |
-| Neo4j | `/extract` still works (pure Python). Ingest queues and reports `degraded`. |
-| Chain RPC | Uploads succeed, anchors stay `PENDING`, status reports `ready: false` with a reason. |
-| spaCy model | Regex tier alone answers `/extract`. NER is strictly additive, never required. |
+| If this is down | Then                                                                                                                                               |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FastAPI         | Express serves entities already in Postgres; graph pages show last-known cluster data behind a "live analysis unavailable" banner. Nothing throws. |
+| Neo4j           | `/extract` still works (pure Python). Ingest queues and reports `degraded`.                                                                        |
+| Chain RPC       | Uploads succeed, anchors stay `PENDING`, status reports `ready: false` with a reason.                                                              |
+| spaCy model     | Regex tier alone answers `/extract`. NER is strictly additive, never required.                                                                     |
 
 ## §G. Tech stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| **Frontend** | React 19 · Vite · TailwindCSS · Framer Motion | Fast HMR, utility styling, cheap animation |
-| **Graph viz** | **Cytoscape.js + fcose** | See note below |
-| **Charts** | Recharts · d3-sankey | Sankey needs d3 control; everything else Recharts |
-| **Maps** | d3-geo + topojson-client | Already proven in the prior codebase |
-| **Core API** | Node.js · Express | Reuses working auth/RBAC/audit layer |
-| **Intel service** | Python · FastAPI | spaCy and NetworkX are Python-native |
-| **NLP** | spaCy `en_core_web_sm` + regex | Regex is deterministic and carries the demo |
-| **Graph analytics** | NetworkX + python-louvain | See note below |
-| **Relational DB** | PostgreSQL 16 | Source of truth |
-| **Graph DB** | Neo4j 5 Community | Real graph traversal; Browser UI is a judging asset |
-| **Blockchain** | Solidity 0.8.24 · Hardhat · OpenZeppelin · Polygon Amoy | Cheap testnet, mature tooling |
-| **Chain client** | ethers v6 | Already used in the prior codebase |
+| Layer               | Choice                                                  | Why                                                 |
+| ------------------- | ------------------------------------------------------- | --------------------------------------------------- |
+| **Frontend**        | React 19 · Vite · TailwindCSS · Framer Motion           | Fast HMR, utility styling, cheap animation          |
+| **Graph viz**       | **Cytoscape.js + fcose**                                | See note below                                      |
+| **Charts**          | Recharts · d3-sankey                                    | Sankey needs d3 control; everything else Recharts   |
+| **Maps**            | d3-geo + topojson-client                                | Already proven in the prior codebase                |
+| **Core API**        | Node.js · Express                                       | Reuses working auth/RBAC/audit layer                |
+| **Intel service**   | Python · FastAPI                                        | spaCy and NetworkX are Python-native                |
+| **NLP**             | spaCy `en_core_web_sm` + regex                          | Regex is deterministic and carries the demo         |
+| **Graph analytics** | NetworkX + python-louvain                               | See note below                                      |
+| **Relational DB**   | PostgreSQL 16                                           | Source of truth                                     |
+| **Graph DB**        | Neo4j 5 Community                                       | Real graph traversal; Browser UI is a judging asset |
+| **Blockchain**      | Solidity 0.8.24 · Hardhat · OpenZeppelin · Polygon Amoy | Cheap testnet, mature tooling                       |
+| **Chain client**    | ethers v6                                               | Already used in the prior codebase                  |
 
-> **Why Cytoscape.js and not React Flow.** React Flow is a node *editor* —
+> **Why Cytoscape.js and not React Flow.** React Flow is a node _editor_ —
 > manual positioning, DAG-shaped, and it degrades past a few hundred nodes. A
 > criminal network needs force-directed layout over 200+ nodes with
 > expand-on-click and community colouring, which is Cytoscape's core competency.
@@ -253,21 +264,21 @@ These are what let three people work in parallel without collisions. **Do not vi
 
 ### H.1 PostgreSQL 🔨 built — `backend/src/db/migrations/001_init.sql`
 
-| Table | Purpose |
-|---|---|
-| `units` | Cyber police units (code, state, location) |
-| `users` | `ADMIN` · `SUPERVISOR` · `INVESTIGATOR` · `ANALYST`; bcrypt hashes |
-| `complaints` | `complaint_ref`, victim details, **`narrative`** (what AI reads), category, `amount_inr`, state/district/lat/lon, status |
-| `entities` | **Canonical, deduplicated identifiers.** `UNIQUE (entity_type, normalized_value)` |
-| `complaint_entities` | Join table with `confidence`, `method` (`REGEX`/`NER`/`MANUAL`), `context_snippet` |
-| `clusters` | Materialised by the analytics job: size, complaint count, total amount, risk, `mastermind_entity_id` |
-| `transactions` | Money-flow spine: from/to entity, amount, `rail`, `hop_index` |
-| `evidence` | Filename, SHA-256, AES-GCM `encrypted_path`/`iv`/`auth_tag`, uploader |
-| `evidence_anchors` | `tx_hash`, `block_number`, `network`, `status` (`PENDING`/`ANCHORED`/`FAILED`) |
-| `verifications` | Every integrity check, pass or fail |
-| `investigations` | `case_ref`, assignee, cluster, status, priority |
-| `alerts` | Threat feed: severity, type, `details JSONB` |
-| `audit_logs` | **Append-only. This table IS the Investigation Timeline page.** |
+| Table                | Purpose                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `units`              | Cyber police units (code, state, location)                                                                               |
+| `users`              | `ADMIN` · `SUPERVISOR` · `INVESTIGATOR` · `ANALYST`; bcrypt hashes                                                       |
+| `complaints`         | `complaint_ref`, victim details, **`narrative`** (what AI reads), category, `amount_inr`, state/district/lat/lon, status |
+| `entities`           | **Canonical, deduplicated identifiers.** `UNIQUE (entity_type, normalized_value)`                                        |
+| `complaint_entities` | Join table with `confidence`, `method` (`REGEX`/`NER`/`MANUAL`), `context_snippet`                                       |
+| `clusters`           | Materialised by the analytics job: size, complaint count, total amount, risk, `mastermind_entity_id`                     |
+| `transactions`       | Money-flow spine: from/to entity, amount, `rail`, `hop_index`                                                            |
+| `evidence`           | Filename, SHA-256, AES-GCM `encrypted_path`/`iv`/`auth_tag`, uploader                                                    |
+| `evidence_anchors`   | `tx_hash`, `block_number`, `network`, `status` (`PENDING`/`ANCHORED`/`FAILED`)                                           |
+| `verifications`      | Every integrity check, pass or fail                                                                                      |
+| `investigations`     | `case_ref`, assignee, cluster, status, priority                                                                          |
+| `alerts`             | Threat feed: severity, type, `details JSONB`                                                                             |
+| `audit_logs`         | **Append-only. This table IS the Investigation Timeline page.**                                                          |
 
 **Entity types:** `PHONE` · `UPI` · `BANK_ACCOUNT` · `WALLET` · `EMAIL` · `IP` ·
 `DEVICE` · `LOCATION` · `PERSON` · `TELEGRAM`
@@ -277,7 +288,7 @@ These are what let three people work in parallel without collisions. **Do not vi
 `MATRIMONIAL` · `OTP_FRAUD` · `OTHER`
 
 > **The single most important constraint in the schema** is
-> `entities UNIQUE (entity_type, normalized_value)`. Entity deduplication *is*
+> `entities UNIQUE (entity_type, normalized_value)`. Entity deduplication _is_
 > the product. If the same UPI ID lands twice under two spellings, no network is
 > ever found. Everything is normalised on write.
 
@@ -301,11 +312,12 @@ never expand the surface — that is how a team new to Neo4j ships in five days.
 ## §I. AI modules
 
 ### I.1 Entity Extraction — `POST /extract`
+
 **In:** complaint narrative. **Out:** typed, normalised entities.
 
 Two tiers, in order:
 
-1. **Regex tier** (deterministic — *this is what actually carries the demo*)
+1. **Regex tier** (deterministic — _this is what actually carries the demo_)
    - Indian phone `(\+91[\-\s]?)?[6-9]\d{9}`
    - UPI `[\w.\-]{3,}@[a-z]{3,}`
    - IFSC, bank account numbers
@@ -319,24 +331,28 @@ Each hit returns `{type, value, normalized_value, confidence, method, context_sn
 > email, checksum-case wallets. Two spellings of one identifier means a missed link.
 
 ### I.2 Relationship Builder — `POST /ingest`
+
 `MERGE`s nodes and edges into Neo4j. Builds the edges that make a network:
 `Phone → Wallet` · `Wallet → Complaint` · `Complaint → Bank` · `Bank → Device` · `Device → IP`.
 
 ### I.3 Community Detection
+
 **Louvain** (`networkx.community.louvain_communities`) over the entity graph →
 `cluster_id`. Connected-components and label-propagation are available as
 cross-checks. Output: named clusters — **Alpha, Beta, Gamma**.
 
 ### I.4 Mastermind Prediction
+
 **PageRank + betweenness centrality**, blended and normalised to an
 **influence score 0–100**. The highest-influence node in a cluster is flagged
 `is_mastermind`.
 
 The logic that makes this credible: a coordinator sits at high betweenness
-(everything routes through them) while holding *low* direct victim contact.
+(everything routes through them) while holding _low_ direct victim contact.
 Mule accounts have the opposite profile — high degree, low betweenness.
 
 ### I.5 Risk Scoring
+
 Weighted blend of complaint frequency · wallet reuse · device reuse ·
 geographic spread · total amount involved.
 Bucketed: `LOW` · `MEDIUM` · `HIGH` · `CRITICAL`.
@@ -369,7 +385,7 @@ pause, and enumeration.
 > **Gotcha already hit and fixed — do not reintroduce it.** The `Verification`
 > struct's timestamp is named **`checkedAt`, not `at`**. ethers decodes structs
 > into `Result` objects that inherit `Array.prototype`, so a field named `at` is
-> shadowed by `Array.prototype.at` and reads back as a *function* on the client.
+> shadowed by `Array.prototype.at` and reads back as a _function_ on the client.
 > The test caught it. Avoid any struct field that collides with an array method.
 
 ### The argument for blockchain here
@@ -423,6 +439,7 @@ three lanes — if you need a shape that is not in it, change the doc first and
 tell the other two.
 
 Conventions:
+
 - All routes except `/health` and `/api/auth/login` require `Authorization: Bearer <jwt>`
 - Errors are always `{ "error": "human readable string" }` with a real status code
 - Timestamps are ISO 8601 UTC
@@ -493,6 +510,7 @@ SIH 21689/
 ## §N. Current status
 
 **🔨 Built (Day 0 complete):**
+
 - Directory scaffold and module copy pass from the prior codebase
 - `backend/src/config/env.js` + `.env.example` — retargeted to ARGUS
 - **Full Postgres schema** — 13 tables, constraints, indexes
@@ -511,6 +529,7 @@ The contract test run has already earned its keep: it caught the `at` /
 written against it.
 
 **⏳ Next, in priority order:**
+
 1. **`backend/src/db/seed.js`** — the seeded dataset (§R); everything depends on it
 2. Express routes + controllers per `docs/API.md`
 3. FastAPI service — extract, ingest, analytics
@@ -527,18 +546,18 @@ meaningfully tested until the seeded dataset exists.
 The prior TRINETRA-X codebase (sibling folder `../SIH`) contributed roughly **35%**
 of the foundation. This is a deliberate, defensible saving — not a shortcut.
 
-| Reused | Change needed |
-|---|---|
-| `db/pool.js`, `db/migrate.js` | none |
-| `authJwt`, `rbac`, `errorHandler`, `rateLimit` | none |
-| `hashService`, `cryptoService`, `storageService` | key name + comments |
-| `config/env.js` | retargeted vars |
-| `chainService.js` structure | rewire to `EvidenceRegistry` — the async-anchor, never-throws, lazy-init discipline is already correct |
-| `IntegrityLedger.sol` | ~80% of the shape of `EvidenceRegistry.sol` |
-| Hardhat harness, deploy pattern | Amoy replaces Sepolia |
-| `api/client.js`, `AuthContext.jsx` | storage key rename |
-| `Bits.jsx`, `Shell.jsx`, `index.css`, `tailwind.config.js` | retheme tokens, keep structure |
-| `indiaNight.js` + `countries-110m.json` | ambient background only |
+| Reused                                                     | Change needed                                                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `db/pool.js`, `db/migrate.js`                              | none                                                                                                   |
+| `authJwt`, `rbac`, `errorHandler`, `rateLimit`             | none                                                                                                   |
+| `hashService`, `cryptoService`, `storageService`           | key name + comments                                                                                    |
+| `config/env.js`                                            | retargeted vars                                                                                        |
+| `chainService.js` structure                                | rewire to `EvidenceRegistry` — the async-anchor, never-throws, lazy-init discipline is already correct |
+| `IntegrityLedger.sol`                                      | ~80% of the shape of `EvidenceRegistry.sol`                                                            |
+| Hardhat harness, deploy pattern                            | Amoy replaces Sepolia                                                                                  |
+| `api/client.js`, `AuthContext.jsx`                         | storage key rename                                                                                     |
+| `Bits.jsx`, `Shell.jsx`, `index.css`, `tailwind.config.js` | retheme tokens, keep structure                                                                         |
+| `indiaNight.js` + `countries-110m.json`                    | ambient background only                                                                                |
 
 **Deleted, not adapted:** all document-management, verify-flow, zero-trust,
 clearance-policy, and IsolationForest modules. **No TRINETRA string survives
@@ -551,6 +570,7 @@ anywhere in this repo.**
 ## §P. Getting started
 
 ### Prerequisites
+
 Node 20+ · Python 3.11+ · Docker Desktop · Git
 
 ### First run
@@ -601,18 +621,17 @@ entity's `influence_score` and `risk_score` sit at 0 until analytics runs, the
 threat feed is empty until the rules run, the Evidence Locker has nothing in it,
 and Neo4j holds nothing. `npm run setup` is the whole cold start in order —
 
-| step | what it does | needs |
-|---|---|---|
-| `migrate` | schema + checksums | Postgres |
-| `seed` | the planted corpus | Postgres |
-| `load-reference` | 31,360 NCRB rows | Postgres |
-| `compute-scores` | influence + risk, written back | Postgres |
-| `generate-alerts` | the five rules → threat feed | Postgres |
-| `seed:evidence` | 12 exhibits, hashed, encrypted, anchored | Hardhat node |
-| `project-neo4j` | the graph projection | intel-service |
+| step              | what it does                             | needs         |
+| ----------------- | ---------------------------------------- | ------------- |
+| `migrate`         | schema + checksums                       | Postgres      |
+| `seed`            | the planted corpus                       | Postgres      |
+| `load-reference`  | 31,360 NCRB rows                         | Postgres      |
+| `compute-scores`  | influence + risk, written back           | Postgres      |
+| `generate-alerts` | the five rules → threat feed             | Postgres      |
+| `seed:evidence`   | 12 exhibits, hashed, encrypted, anchored | Hardhat node  |
+| `project-neo4j`   | the graph projection                     | intel-service |
 
-— and the last two are why it runs after steps 3 and 4 rather than inside step
-2. Both degrade gracefully if their service is down (exhibits stay `PENDING`,
+— and the last two are why it runs after steps 3 and 4 rather than inside step 2. Both degrade gracefully if their service is down (exhibits stay `PENDING`,
 the projection is skipped with a message) rather than failing the run, so a
 partial stack still gets you a working app; you just have to re-run them once
 the missing service is up.
@@ -624,12 +643,12 @@ this, not a bug.
 
 ### Demo accounts (seeded)
 
-| Email | Role |
-|---|---|
-| `admin@argus.gov.in` | ADMIN |
-| `supervisor@argus.gov.in` | SUPERVISOR |
+| Email                       | Role         |
+| --------------------------- | ------------ |
+| `admin@argus.gov.in`        | ADMIN        |
+| `supervisor@argus.gov.in`   | SUPERVISOR   |
 | `investigator@argus.gov.in` | INVESTIGATOR |
-| `analyst@argus.gov.in` | ANALYST |
+| `analyst@argus.gov.in`      | ANALYST      |
 
 Password for all: set in `seed.js` — keep it simple for the demo, and say so.
 
@@ -644,15 +663,15 @@ Password for all: set in `seed.js` — keep it simple for the demo, and say so.
 ## §Q. Five-day schedule
 
 **Day 0 — all three together (half day):** repo init, module copy, **freeze
-`docs/API.md`**, `docker compose up`. ✅ *Done.*
+`docs/API.md`**, `docker compose up`. ✅ _Done._
 
-| | **Dev A — Core & Data** | **Dev B — AI & Graph** | **Dev C — Frontend** |
-|---|---|---|---|
-| **D1** | Schema, migrate, auth ported, **seeder v1** | FastAPI skeleton, regex extractor, Neo4j `MERGE` ingest | Theme, Shell, Login, routing, Bits kit |
-| **D2** | Complaints + entities + clusters endpoints, intel proxy | spaCy NER, bulk ingest, Louvain + PageRank | Dashboard, stat tiles, threat feed |
-| **D3** | Evidence upload, AES-GCM, SHA-256, anchor queue | Neighbors + cluster + money-trace endpoints, risk scoring | **Network Explorer** — full day, it earns it |
-| **D4** | Contract tests, deploy local + Amoy, verify flow | Alert rules, analytics rerun, tune the plant | Complaint Intelligence, Money Flow, Geo |
-| **D5** | Chain → UI, audit → timeline, health checks | Fallbacks for every AI path, rehearsal | Timeline, Evidence Locker, Admin, polish |
+|        | **Dev A — Core & Data**                                 | **Dev B — AI & Graph**                                    | **Dev C — Frontend**                         |
+| ------ | ------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------- |
+| **D1** | Schema, migrate, auth ported, **seeder v1**             | FastAPI skeleton, regex extractor, Neo4j `MERGE` ingest   | Theme, Shell, Login, routing, Bits kit       |
+| **D2** | Complaints + entities + clusters endpoints, intel proxy | spaCy NER, bulk ingest, Louvain + PageRank                | Dashboard, stat tiles, threat feed           |
+| **D3** | Evidence upload, AES-GCM, SHA-256, anchor queue         | Neighbors + cluster + money-trace endpoints, risk scoring | **Network Explorer** — full day, it earns it |
+| **D4** | Contract tests, deploy local + Amoy, verify flow        | Alert rules, analytics rerun, tune the plant              | Complaint Intelligence, Money Flow, Geo      |
+| **D5** | Chain → UI, audit → timeline, health checks             | Fallbacks for every AI path, rehearsal                    | Timeline, Evidence Locker, Admin, polish     |
 
 **Day 5 afternoon is frozen for demo rehearsal, not features.**
 
@@ -664,11 +683,11 @@ and a mastermind that centrality genuinely ranks first.
 
 Generate ~220 complaints across 18 states, then **plant three networks**:
 
-| Cluster | Complaints | Shape |
-|---|---|---|
-| **Alpha** | ~42 | UPI investment scam. Shares 3 wallets, 2 device fingerprints, 4 IPs. One `Person` node sits two hops from everything and holds **no direct victim contact** — the mastermind. |
-| **Beta** | ~28 | Digital-arrest scam, one shared VoIP range. |
-| **Gamma** | ~15 | Crypto laundering, clean 5-hop `TRANSFERRED_TO` chain ending at an exchange. |
+| Cluster   | Complaints | Shape                                                                                                                                                                         |
+| --------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Alpha** | ~42        | UPI investment scam. Shares 3 wallets, 2 device fingerprints, 4 IPs. One `Person` node sits two hops from everything and holds **no direct victim contact** — the mastermind. |
+| **Beta**  | ~28        | Digital-arrest scam, one shared VoIP range.                                                                                                                                   |
+| **Gamma** | ~15        | Crypto laundering, clean 5-hop `TRANSFERRED_TO` chain ending at an exchange.                                                                                                  |
 
 The remainder is **unclustered noise**, so the clustering has something to reject.
 
@@ -687,11 +706,11 @@ At five days this scope only closes because most pages read from one well-built
 dataset. **Judges will ask. Be straight about it — a confident honest answer
 scores better than a hedge.**
 
-| | |
-|---|---|
-| **Genuinely live** | Entity extraction on typed text · Neo4j ingest and neighbour expansion · Louvain clustering · PageRank ranking · SHA-256 hashing · on-chain anchoring and verification · the audit trail |
-| **Computed from seeded data** | Threat index · heatmap densities · cluster summaries · money-flow chains · alert feed |
-| **Static** | **Nothing user-facing.** If a number cannot be computed, cut the widget rather than fake it. |
+|                               |                                                                                                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Genuinely live**            | Entity extraction on typed text · Neo4j ingest and neighbour expansion · Louvain clustering · PageRank ranking · SHA-256 hashing · on-chain anchoring and verification · the audit trail |
+| **Computed from seeded data** | Threat index · heatmap densities · cluster summaries · money-flow chains · alert feed                                                                                                    |
+| **Static**                    | **Nothing user-facing.** If a number cannot be computed, cut the widget rather than fake it.                                                                                             |
 
 The one demo moment that **must** be genuinely live is **Scene 2**: an
 investigator types a fresh complaint on stage, entities pop out, and the graph
@@ -699,16 +718,16 @@ redraws with the new links. Everything else can be pre-seeded without embarrassm
 
 ## §T. Demo script — 3 minutes, 8 scenes
 
-| # | Scene | What the audience sees |
-|---|---|---|
-| 1 | **The complaint** | Victim reports a ₹48,500 UPI scam. One ordinary case. |
-| 2 | **AI extraction** ⭐ | Typed live. Phone, UPI ID, wallet, IP pop out of the narrative with confidence scores. |
-| 3 | **The network** ⭐ | Graph reveals **42 linked complaints** the investigator never knew were related. |
-| 4 | **The mastermind** | AI highlights the highest-influence node — someone who never contacted a single victim. |
-| 5 | **The money** | Sankey traces victim → 4 mules → exchange → cash-out. |
-| 6 | **The evidence** | Blockchain verification succeeds; tamper the file, it fails loudly. |
-| 7 | **The feed** | Threat Feed updates with the new correlation. |
-| 8 | **The record** | Investigation Timeline shows the immutable audit trail. |
+| #   | Scene                | What the audience sees                                                                  |
+| --- | -------------------- | --------------------------------------------------------------------------------------- |
+| 1   | **The complaint**    | Victim reports a ₹48,500 UPI scam. One ordinary case.                                   |
+| 2   | **AI extraction** ⭐ | Typed live. Phone, UPI ID, wallet, IP pop out of the narrative with confidence scores.  |
+| 3   | **The network** ⭐   | Graph reveals **42 linked complaints** the investigator never knew were related.        |
+| 4   | **The mastermind**   | AI highlights the highest-influence node — someone who never contacted a single victim. |
+| 5   | **The money**        | Sankey traces victim → 4 mules → exchange → cash-out.                                   |
+| 6   | **The evidence**     | Blockchain verification succeeds; tamper the file, it fails loudly.                     |
+| 7   | **The feed**         | Threat Feed updates with the new correlation.                                           |
+| 8   | **The record**       | Investigation Timeline shows the immutable audit trail.                                 |
 
 **Rehearse twice on Day 5** — once with everything up, once with FastAPI
 deliberately killed, to confirm the frontend degrades to seeded data instead of
@@ -754,47 +773,47 @@ upload must succeed, the anchor must stay `PENDING`, and nothing may hang.
 
 ## §V. Risks
 
-| Risk | Mitigation |
-|---|---|
-| **Entity dedup fails → no network appears** | Normalise on write, `MERGE` on a unique key. Assert entity counts after seeding on Day 1 |
-| **India state geometry missing** | `countries-110m.json` has **country outlines only, no state boundaries**. Source an India-states TopoJSON (~150KB) into `src/assets/geo/` on **Day 1**, not Day 4 |
-| Neo4j is new to the team | Only 5 Cypher queries exist in total. Write all 5 on Day 1, never expand |
-| Cytoscape performance | Cap initial render at 150 nodes; expand on demand only |
-| Amoy faucet dry on demo day | Local Hardhat deployment stays wired; `CHAIN_NETWORK` flips it |
-| spaCy download fails at venue | Regex tier alone carries the demo; NER strictly additive |
-| 10 pages in 5 days | Tier them. If Day 5 slips, Admin and Timeline degrade to plain tables over `audit_logs` and `users` — nearly free |
-| Demo machine has no internet | Everything runs locally: Docker, Hardhat, vendored geo assets, local spaCy model |
+| Risk                                        | Mitigation                                                                                                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entity dedup fails → no network appears** | Normalise on write, `MERGE` on a unique key. Assert entity counts after seeding on Day 1                                                                          |
+| **India state geometry missing**            | `countries-110m.json` has **country outlines only, no state boundaries**. Source an India-states TopoJSON (~150KB) into `src/assets/geo/` on **Day 1**, not Day 4 |
+| Neo4j is new to the team                    | Only 5 Cypher queries exist in total. Write all 5 on Day 1, never expand                                                                                          |
+| Cytoscape performance                       | Cap initial render at 150 nodes; expand on demand only                                                                                                            |
+| Amoy faucet dry on demo day                 | Local Hardhat deployment stays wired; `CHAIN_NETWORK` flips it                                                                                                    |
+| spaCy download fails at venue               | Regex tier alone carries the demo; NER strictly additive                                                                                                          |
+| 10 pages in 5 days                          | Tier them. If Day 5 slips, Admin and Timeline degrade to plain tables over `audit_logs` and `users` — nearly free                                                 |
+| Demo machine has no internet                | Everything runs locally: Docker, Hardhat, vendored geo assets, local spaCy model                                                                                  |
 
 ## §W. Judging alignment
 
-| SIH criterion | Where ARGUS answers it |
-|---|---|
-| **Novelty** | Network-first investigation instead of case-first; mastermind ranking from graph topology |
-| **Technical depth** | Real graph DB, two-tier NLP, Louvain + PageRank, custom Solidity with append-only custody |
-| **Practical usefulness** | Maps directly onto how NCRP complaints actually arrive and how cyber cells actually work |
+| SIH criterion                | Where ARGUS answers it                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Novelty**                  | Network-first investigation instead of case-first; mastermind ranking from graph topology        |
+| **Technical depth**          | Real graph DB, two-tier NLP, Louvain + PageRank, custom Solidity with append-only custody        |
+| **Practical usefulness**     | Maps directly onto how NCRP complaints actually arrive and how cyber cells actually work         |
 | **Blockchain justification** | Tamper-evident custody trail including failed checks — a property a mutable DB cannot offer (§J) |
-| **AI justification** | Extraction, correlation, clustering, and ranking are all doing real work, not decoration |
-| **Completeness** | 10 working pages, four services, seeded national-scale dataset |
-| **Presentation** | Command-centre UI; a rehearsed 3-minute story with a live moment (§T) |
+| **AI justification**         | Extraction, correlation, clustering, and ranking are all doing real work, not decoration         |
+| **Completeness**             | 10 working pages, four services, seeded national-scale dataset                                   |
+| **Presentation**             | Command-centre UI; a rehearsed 3-minute story with a live moment (§T)                            |
 
-**The question to prepare hardest for:** *"Why does this need a blockchain?"*
+**The question to prepare hardest for:** _"Why does this need a blockchain?"_
 The answer is §J — not storage, but an append-only custody trail that records
 failed integrity checks on the same terms as passes, which no admin can quietly
 rewrite.
 
 ## §X. Glossary
 
-| Term | Meaning |
-|---|---|
-| **Entity** | Any identifier extracted from a complaint — phone, UPI, wallet, IP, device |
-| **Cluster** | A criminal network discovered by community detection (Alpha, Beta, Gamma) |
-| **Influence score** | 0–100 from PageRank + betweenness; the mastermind signal |
-| **Mule account** | Bank account rented to launder proceeds; high degree, low betweenness |
-| **Anchor** | Writing an evidence digest on-chain |
-| **Digest** | SHA-256 of the plaintext exhibit — the only thing that goes on-chain |
-| **NCRP** | National Cybercrime Reporting Portal |
-| **The plant** | The deliberately-designed network structure in the seeded data (§R) |
-| **Amoy** | Polygon's test network (chainId 80002) |
+| Term                | Meaning                                                                    |
+| ------------------- | -------------------------------------------------------------------------- |
+| **Entity**          | Any identifier extracted from a complaint — phone, UPI, wallet, IP, device |
+| **Cluster**         | A criminal network discovered by community detection (Alpha, Beta, Gamma)  |
+| **Influence score** | 0–100 from PageRank + betweenness; the mastermind signal                   |
+| **Mule account**    | Bank account rented to launder proceeds; high degree, low betweenness      |
+| **Anchor**          | Writing an evidence digest on-chain                                        |
+| **Digest**          | SHA-256 of the plaintext exhibit — the only thing that goes on-chain       |
+| **NCRP**            | National Cybercrime Reporting Portal                                       |
+| **The plant**       | The deliberately-designed network structure in the seeded data (§R)        |
+| **Amoy**            | Polygon's test network (chainId 80002)                                     |
 
 ## §Y. Open decisions
 
@@ -811,5 +830,5 @@ rewrite.
 3. **Never fake a number in the UI.** Cut the widget instead (§S).
 4. **Normalise every identifier on write.** Dedup is the product (§H).
 5. **Nothing may be a single point of failure.** Every service degrades (§F).
-6. **Match the surrounding code's style.** Comments explain *why*, not *what* — the existing files set the standard.
+6. **Match the surrounding code's style.** Comments explain _why_, not _what_ — the existing files set the standard.
 7. **Commit messages say what changed and why.** The audit trail habit starts with us.

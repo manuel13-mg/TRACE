@@ -1,6 +1,8 @@
+const pool = require('../db/pool');
 const intel = require('../services/intelClient');
 const graph = require('../services/graphService');
 const audit = require('../services/auditService');
+const { normalize } = require('../services/normalize');
 const { asyncHandler, notFound, badRequest } = require('../lib/errors');
 
 /**
@@ -108,6 +110,104 @@ const common = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /api/graph/simulate-removal — the Fragmentation Simulator (innovation
+ * layer).
+ *
+ * Accepts one or two node ids, removes them from a COPY of the live graph and
+ * reports what happens to the organisation they belonged to: fragment count,
+ * resilience delta, the subgraph before/after, and the new top-influence node
+ * (the "who takes over" beat of the demo). The stored graph is never mutated —
+ * a simulation, not an arrest.
+ */
+const simulateRemoval = asyncHandler(async (req, res) => {
+  const { nodes: nodeIds } = req.valid.body;
+
+  const result = await graph.simulateRemoval(nodeIds);
+  if (result.error === 'unknown_node') throw notFound(`Node "${result.missing[0]}"`);
+
+  res.json({ ...result, source: 'postgres' });
+});
+
+/**
+ * POST /api/graph/intel-links — the intelligence-edge write path (innovation
+ * layer).
+ *
+ * The complaint intake API can only create REPORTED_IN edges (an entity named
+ * in a filing). The coordinator pattern the demo turns on lives in
+ * entity_links — the seized-contact-list, telco and bank-KYC edges that reach
+ * people no victim ever names — and until now nothing on the API could write
+ * those. This closes that gap so the innovation dataset can be seeded through
+ * the real pipeline rather than with direct SQL.
+ *
+ * ADMIN only, audited, and idempotent (ON CONFLICT DO NOTHING), because the
+ * seed script may be re-run and a re-run must not duplicate the corpus.
+ */
+const intelLinks = asyncHandler(async (req, res) => {
+  const { links } = req.valid.body;
+
+  const result = await pool.withTransaction(async (client) => {
+    const entityIds = new Map(); // `${type}::${normalized}` -> id
+    const created = { links: 0, entities: 0 };
+
+    for (const link of links) {
+      const endpoints = [link.from, link.to];
+      const ids = [];
+
+      for (const ref of endpoints) {
+        const norm = normalize(ref.type, ref.value);
+        if (!norm) throw badRequest(`cannot normalise ${ref.type} "${ref.value}"`);
+        const key = `${ref.type}::${norm}`;
+
+        if (!entityIds.has(key)) {
+          const up = await client.query(
+            `INSERT INTO entities (entity_type, value, normalized_value, label, last_seen)
+             VALUES ($1,$2,$3,$4, now())
+             ON CONFLICT (entity_type, normalized_value)
+               DO UPDATE SET label = COALESCE(entities.label, EXCLUDED.label),
+                             last_seen = now()
+             RETURNING id, (xmax = 0) AS inserted`,
+            [ref.type, String(ref.value).slice(0, 255), norm, ref.label || null]
+          );
+          entityIds.set(key, up.rows[0].id);
+          // xmax = 0 is Postgres' own answer to "did this row pre-exist".
+          // COUNTING otherwise would double-report entities on a re-run.
+          if (up.rows[0].inserted) created.entities += 1;
+        }
+        ids.push(entityIds.get(key));
+      }
+
+      // The upsert cannot tell us whether the row pre-existed, so count
+      // entities honestly: only rows this transaction actually inserted.
+      const ins = await client.query(
+        `INSERT INTO entity_links (from_entity_id, to_entity_id, relationship, weight, source, note)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (from_entity_id, to_entity_id, relationship) DO NOTHING
+         RETURNING id`,
+        [ids[0], ids[1], link.relationship, link.weight ?? 1, link.source ?? 'INTEL', link.note || null]
+      );
+      if (ins.rowCount) created.links += 1;
+    }
+
+    return created;
+  });
+
+  graph.invalidate();
+
+  await audit.log({
+    actorId: req.user.id,
+    action: 'GRAPH_INTEL_LINKED',
+    entityType: 'graph',
+    metadata: { links: result.links, entities: result.entities },
+    ipAddress: audit.clientIp(req),
+  });
+
+  res.status(201).json({
+    ...result,
+    note: 'Intelligence edges written. The graph cache was refreshed.',
+  });
+});
+
+/**
  * ADMIN only. Rebuilds Neo4j from Postgres and drops the local cache.
  *
  * Sends the corpus in chunks. A single body carrying 220 complaints and their
@@ -160,4 +260,7 @@ const rebuild = asyncHandler(async (req, res) => {
   res.json({ ...totals, complaints: corpus.length, source: 'intel-service' });
 });
 
-module.exports = { overview, neighbors, cluster, why, path, common, rebuild };
+module.exports = {
+  overview, neighbors, cluster, why, path, common, rebuild,
+  simulateRemoval, intelLinks,
+};

@@ -107,7 +107,9 @@ function toElements(nodes = [], edges = []) {
       data: {
         ...n,
         size: nodeSize(n.influence),
-        colour: nodeColour(n),
+        // A caller-provided colour wins (the Fragmentation Simulator paints
+        // nodes by fragment); otherwise the standard cluster encoding applies.
+        colour: n.colour ?? nodeColour(n),
       },
     })),
     // An edge whose endpoint was filtered out would make Cytoscape throw, so

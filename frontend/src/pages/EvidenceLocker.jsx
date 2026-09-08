@@ -19,7 +19,7 @@
 
 import { useRef, useState } from 'react';
 import {
-  Download, FileCheck2, Link2, Lock, ShieldAlert, ShieldCheck, Upload as UploadIcon,
+  Download, FileCheck2, FlaskConical, Link2, Lock, ShieldAlert, ShieldCheck, Upload as UploadIcon,
 } from 'lucide-react';
 
 import { evidence as evidenceApi, chain as chainApi } from '@/api';
@@ -255,10 +255,37 @@ function CustodyTrail({ evidenceId }) {
 function ExhibitDetail({ exhibit, onChanged }) {
   const { user } = useAuth();
   const [verifying, setVerifying] = useState(false);
+  const [tampering, setTampering] = useState(false);
+  const [tamperResult, setTamperResult] = useState(null);
   const [result, setResult] = useState(null);
   const [trailKey, setTrailKey] = useState(0);
 
   const canReanchor = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
+  const canTamper = user?.role === 'ADMIN';
+
+  /**
+   * Demo-only, ADMIN: deliberately substitutes the stored exhibit so the next
+   * verification FAILS and the failure is written to the chain of custody.
+   * This is the clickable version of what scripts/evidence-e2e.js proves from
+   * the terminal — the whole tamper-detection story in front of judges.
+   */
+  async function tamper() {
+    if (!window.confirm(
+      'This permanently replaces the stored exhibit with different content. '
+      + 'The next verification will FAIL and the failure will be recorded on-chain. Continue?'
+    )) return;
+    setTampering(true);
+    setTamperResult(null);
+    try {
+      const r = await evidenceApi.tamper(exhibit.id);
+      setTamperResult(r);
+      onChanged?.();
+    } catch (err) {
+      setTamperResult({ error: err.message });
+    } finally {
+      setTampering(false);
+    }
+  }
   const anchor = exhibit.anchor ?? {};
   const tone = ANCHOR_TONE[anchor.status] ?? ANCHOR_TONE.PENDING;
 
@@ -340,11 +367,22 @@ function ExhibitDetail({ exhibit, onChanged }) {
             </div>
           )}
 
-          <div className="flex gap-1.5">
+          {canTamper && (
+            <button
+              type="button"
+              onClick={tamper}
+              disabled={tampering || verifying}
+              title="Demo only: substitute the stored exhibit so the next verify fails"
+              className="flex h-[30px] items-center justify-center gap-1.5 rounded-[3px] border border-amber/40 bg-amber/[0.08] px-3 text-[12px] font-medium text-amber transition-colors hover:bg-amber/[0.16] disabled:opacity-60"
+            >
+              {tampering ? <><Spinner className="text-amber" /> Substituting</> : <><FlaskConical className="size-3.5" strokeWidth={2} /> Tamper (demo)</>}
+            </button>
+          )}
+          <div className="flex flex-1 gap-1.5">
             <button
               type="button"
               onClick={verify}
-              disabled={verifying}
+              disabled={verifying || tampering}
               className="flex h-[30px] flex-1 items-center justify-center gap-1.5 rounded-[3px] bg-blue text-[12.5px] font-medium text-white transition-colors hover:bg-bluehi disabled:opacity-60"
             >
               {verifying ? <><Spinner className="text-white" /> Verifying</> : <><FileCheck2 className="size-3.5" strokeWidth={2} /> Verify integrity</>}
@@ -367,6 +405,25 @@ function ExhibitDetail({ exhibit, onChanged }) {
               </button>
             )}
           </div>
+
+          {/* The tamper banner: the exhibit is substituted, the sealed digest
+              is untouched, and the next verify is guaranteed to fail. */}
+          {tamperResult && (
+            <div
+              className={cn(
+                'rounded-[3px] border px-2.5 py-2',
+                tamperResult.error ? 'border-hair bg-raise/40' : 'border-amber/40 bg-amber/[0.09]'
+              )}
+            >
+              <p className={cn('flex items-center gap-1.5 text-[12.5px] font-semibold', tamperResult.error ? 'text-danger' : 'text-amber')}>
+                <FlaskConical className="size-3.5" strokeWidth={2.5} />
+                {tamperResult.error ? 'Could not substitute the exhibit' : 'Exhibit substituted on disk'}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-dim">
+                {tamperResult.error ?? 'The stored file is now different content, re-encrypted under the same key. The sealed digest above is unchanged — click Verify to watch it fail, and see the failure written permanently into the chain of custody.'}
+              </p>
+            </div>
+          )}
 
           {/*
             The verification verdict. A failure is stated in full — the note

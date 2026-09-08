@@ -61,3 +61,5 @@ crime-in-india-datasets/
 frontend/shots/
 
 pdfs/
+docker-compose.local.yml
+.freebuff/

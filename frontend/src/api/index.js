@@ -40,6 +40,8 @@ export const graph = {
   path: (from, to) => get('/api/graph/path', { from, to }),
   common: (a, b) => get('/api/graph/common', { a, b }),
   rebuild: () => post('/api/graph/rebuild'),
+  /** Fragmentation Simulator — one or two node ids, never mutates the graph. */
+  simulateRemoval: (nodeIds) => post('/api/graph/simulate-removal', { nodes: nodeIds }),
 };
 
 export const clusters = {
@@ -84,6 +86,8 @@ export const evidence = {
   verify: (id) => post(`/api/evidence/${id}/verify`),
   history: (id) => get(`/api/evidence/${id}/history`),
   reanchor: (id) => post(`/api/evidence/${id}/anchor`),
+  /** Demo-only, ADMIN — deliberately corrupts the exhibit so verify fails. */
+  tamper: (id) => post(`/api/evidence/${id}/tamper`),
 
   upload: (file, { title, evidenceType, complaintId } = {}) => {
     const form = new FormData();

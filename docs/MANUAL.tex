@@ -1,0 +1,458 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\definecolor{argusblue}{HTML}{1456A0}
+\definecolor{codegray}{HTML}{F3F5F7}
+\definecolor{darkgray}{HTML}{30343B}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=argusblue,
+  urlcolor=argusblue,
+  pdftitle={TRACE Operator Manual},
+  pdfauthor={TRACE Project}
+}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codegray},
+  frame=single,
+  rulecolor=\color{gray!35},
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  language=bash
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{TRACE Operator Manual}
+\rhead{TRACE}
+\cfoot{\thepage}
+
+\titleformat{\section}{\Large\bfseries\color{argusblue}}{}{0pt}{}
+\titleformat{\subsection}{\large\bfseries\color{darkgray}}{}{0pt}{}
+
+% detokenize keeps underscores and other literal path characters out of math mode.
+\newcommand{\pathcode}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\important}[1]{\textbf{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{25mm}
+  {\Huge\bfseries\color{argusblue} TRACE\par}
+  \vspace{5mm}
+  {\LARGE Operator and Demonstration Manual\par}
+  \vspace{12mm}
+  {\large Threat Relationship Analysis and Connection Engine\par}
+  \vspace{4mm}
+  {\large Smart India Hackathon 2026 - SIH26189\par}
+  \vfill
+  \begin{tabular}{ll}
+    \textbf{Frontend:} & \url{http://localhost:5173} \\
+    \textbf{Core API:} & \url{http://localhost:4000} \\
+    \textbf{Intel service:} & \url{http://localhost:8000} \\
+    \textbf{Neo4j Browser:} & \url{http://localhost:7474} \\
+    \textbf{Local chain:} & \url{http://localhost:8545}
+  \end{tabular}
+  \vfill
+  {\small Version prepared September 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Purpose and Scope}
+
+TRACE (Threat Relationship Analysis and Connection Engine) is an investigation platform for correlating cybercrime complaints into criminal networks. It extracts identifiers from complaint narratives, normalizes repeated identifiers, builds a graph of relationships, ranks influential nodes, and protects evidence integrity with a blockchain-backed custody record.
+
+This manual is for investigators, analysts, administrators, demonstrators, and developers operating the local TRACE environment. It describes the current implementation, not a future production deployment. All demonstration identities, complaints, accounts, phone numbers, wallets, and evidence are synthetic unless explicitly supplied by an operator.
+
+\subsection{What TRACE is not}
+
+TRACE is not a public victim-reporting portal and does not replace official complaint-registration systems. It is an intelligence and investigation demonstrator that helps an authorized user understand relationships across records.
+
+\section{System Overview}
+
+The system is composed of the following services:
+
+\begin{longtable}{p{0.22\textwidth}p{0.25\textwidth}p{0.43\textwidth}}
+\toprule
+\textbf{Component} & \textbf{Default address} & \textbf{Responsibility} \\
+\midrule
+Frontend & \pathcode{localhost:5173} & React investigator interface, graph views, forms, dashboards, evidence screens. \\
+Core API & \pathcode{localhost:4000} & Authentication, RBAC, complaints, entities, graph fallback, evidence, alerts, audit, and blockchain bridge. \\
+PostgreSQL & \pathcode{localhost:5434} locally & Source of truth for users, complaints, entities, relationships, transactions, alerts, and evidence metadata. \\
+Intel service & \pathcode{localhost:8000} & FastAPI extraction service and Neo4j projection. \\
+Neo4j & \pathcode{localhost:7687} & Derived graph projection used by the intelligence lane. \\
+Hardhat chain & \pathcode{localhost:8545} & Local Ethereum-compatible chain hosting the EvidenceRegistry contract. \\
+\bottomrule
+\end{longtable}
+
+The browser talks only to the Core API. The Core API talks to PostgreSQL and, when available, the intelligence and blockchain services.
+
+\section{Starting the Local Environment}
+
+\subsection{Prerequisites}
+
+Install Docker Desktop, Node.js 20 or newer, Python 3.12 or newer, and the dependencies in each project directory. The repository contains the required Node and Python manifests.
+
+\subsection{Start databases}
+
+From the repository root, use the local override when host port 5432 is already occupied:
+
+\begin{lstlisting}
+docker-compose -f docker-compose.yml -f docker-compose.local.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.local.yml ps
+\end{lstlisting}
+
+Both \pathcode{argus-postgres} and \pathcode{argus-neo4j} should report \texttt{healthy}. The local override exposes PostgreSQL on port 5434.
+
+\subsection{Prepare and seed the backend}
+
+\begin{lstlisting}
+cd backend
+npm install
+npm run setup
+\end{lstlisting}
+
+The setup command runs migrations, the synthetic base seed, reference loading, score computation, alert generation, evidence seeding, and Neo4j projection. The NCRB reference loader requires a local \pathcode{crime-in-india-datasets} directory. If that dataset is unavailable, run the remaining stages individually:
+
+\begin{lstlisting}
+npm run compute-scores
+npm run generate-alerts
+npm run seed:evidence
+npm run project-neo4j
+\end{lstlisting}
+
+\subsection{Start the services}
+
+Use separate terminals:
+
+\begin{lstlisting}
+cd intel-service
+.venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000
+\end{lstlisting}
+
+\begin{lstlisting}
+cd blockchain
+npm run node
+\end{lstlisting}
+
+Deploy the local evidence contract once per fresh Hardhat node:
+
+\begin{lstlisting}
+cd blockchain
+npm run deploy:local
+\end{lstlisting}
+
+Start the Core API and frontend:
+
+\begin{lstlisting}
+cd backend
+npm run dev
+\end{lstlisting}
+
+\begin{lstlisting}
+cd frontend
+npm run dev
+\end{lstlisting}
+
+\subsection{Health checks}
+
+Open the frontend at \url{http://localhost:5173}. The following checks can be run in PowerShell:
+
+\begin{lstlisting}
+Invoke-WebRequest -UseBasicParsing http://localhost:4000/health
+Invoke-WebRequest -UseBasicParsing http://localhost:4000/health/ready
+Invoke-WebRequest -UseBasicParsing http://localhost:8000/health
+\end{lstlisting}
+
+The Core API readiness check must report PostgreSQL as healthy. The intelligence health response should report Neo4j connectivity when the graph projection is available.
+
+\section{Users and Access}
+
+Open \url{http://localhost:5173} and sign in with a seeded account. The usual investigator account is:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Email} & \pathcode{investigator@argus.gov.in} \\
+\textbf{Password} & \pathcode{argus2026}
+\end{tabular}
+\end{center}
+
+The administrator account is used for administration and the demonstration-only tamper action:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Email} & \pathcode{admin@argus.gov.in} \\
+\textbf{Password} & \pathcode{argus2026}
+\end{tabular}
+\end{center}
+
+\important{Do not use demonstration credentials in a production deployment.} The system uses JWT authentication and role-based access control. Raw evidence downloads are restricted more tightly than evidence metadata and custody history.
+
+\section{Submitting a Complaint}
+
+\subsection{Using the web application}
+
+\begin{enumerate}[leftmargin=*]
+  \item Sign in as an investigator or another authorized user.
+  \item Open \textbf{Complaints} from the navigation rail.
+  \item Select \textbf{New complaint}.
+  \item Enter the victim name and complaint narrative. These are required.
+  \item Optionally enter phone, email, amount, state, and district.
+  \item Select a scam category.
+  \item Submit the complaint.
+\end{enumerate}
+
+The page refreshes the complaint register after a successful submission. The narrative should contain identifiers found in the report, such as phone numbers, UPI IDs, bank accounts, wallet addresses, email addresses, Telegram handles, or other relevant identifiers.
+
+\subsection{What happens after submission}
+
+The Core API performs the following pipeline:
+
+\begin{enumerate}[leftmargin=*]
+  \item Stores the complaint metadata and narrative.
+  \item Sends the narrative to the intelligence service for extraction.
+  \item Falls back to the local deterministic regex extractor if the intelligence service is unavailable.
+  \item Normalizes extracted identifiers.
+  \item Upserts entities and links them to the complaint.
+  \item Updates the graph projection when the intelligence service is available.
+  \item Returns the complaint, extracted entities, linked count, cluster information, and extraction status.
+\end{enumerate}
+
+Repeated surface forms of the same identifier are deliberately collapsed. For example, several formats of an Indian phone number can resolve to one normalized phone entity.
+
+\subsection{Complaint API example}
+
+After obtaining a JWT from \pathcode{POST /api/auth/login}, an authorized client can submit:
+
+\begin{lstlisting}[language=Java]
+POST /api/complaints
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "victim_name": "Fictional Victim",
+  "victim_phone": "9876543210",
+  "victim_email": "victim@example.com",
+  "narrative": "The caller used +91 91234 56789 and asked me to send money to operator@upi and account 12345678901.",
+  "scam_category": "UPI_FRAUD",
+  "amount_inr": 50000,
+  "state": "Maharashtra",
+  "district": "Mumbai"
+}
+\end{lstlisting}
+
+\section{Investigating the Network}
+
+\subsection{Dashboard}
+
+The Dashboard provides the national summary, active alerts, recent complaints, geographic indicators, and current service status. Use it as the entry point for triage rather than as the detailed investigation workspace.
+
+\subsection{Complaint detail}
+
+Select a complaint reference in the Complaint register. The detail view provides the narrative, extracted entities, linked complaints, cluster information, and related investigation information.
+
+\subsection{Network Explorer}
+
+Open \textbf{Network} to inspect the interactive graph. Nodes represent complaints and entities such as people, phones, wallets, bank accounts, UPI IDs, emails, and locations. The graph uses:
+
+\begin{itemize}[leftmargin=*]
+  \item node size for influence,
+  \item cluster colour for community membership,
+  \item edge thickness for relationship strength,
+  \item filters for node types,
+  \item click selection for the detail rail, and
+  \item expansion for nearby nodes.
+\end{itemize}
+
+A node with high influence is not automatically guilty. It is a graph finding that needs human review and corroborating evidence.
+
+\subsection{Explainability}
+
+The graph explanation view answers why a node is important. It can show bridge paths, removal impact, cluster rank, graph-wide rank, degree, influence, and whether the person has appeared in a complaint. A coordinator may be structurally important while appearing in zero complaint narratives; that is a lead, not a legal conclusion.
+
+\subsection{Other investigation views}
+
+\begin{description}[leftmargin=3.2cm,style=nextline]
+  \item[Clusters] Inspect organizations and their top entities.
+  \item[Money Flow] Follow transaction paths from a complaint through accounts and wallets.
+  \item[Geo] Review synthetic geographic patterns and, when installed, the NCRB reference layer.
+  \item[Threat Feed] Review generated alerts by severity and inspect their explanations.
+  \item[Timeline] Review append-only audit events.
+\end{description}
+
+\section{Network Fragmentation Simulator}
+
+The Fragmentation Simulator answers a planning question: what happens to a network if one or two nodes are removed? It operates on a copy of the graph and does not mutate stored data.
+
+\subsection{Procedure}
+
+\begin{enumerate}[leftmargin=*]
+  \item Open \textbf{Fragmentation} from the investigation navigation.
+  \item Select a node on the canvas or use \textbf{Pick by name}.
+  \item Select \textbf{Simulate removal}.
+  \item Use \textbf{Before} and \textbf{After} to compare the network.
+  \item Read the resilience, fragment count, largest component, and new key connector.
+  \item Select a second target and run the combined simulation if coordinated removal is relevant.
+\end{enumerate}
+
+The resilience value is the largest remaining connected component as a percentage of the original affected organization. The surfaced key connector is the highest-influence remaining entity after recomputation.
+
+\subsection{Synthetic demonstration network}
+
+Run the innovation seed after the base setup:
+
+\begin{lstlisting}
+cd backend
+npm run seed:innovation
+\end{lstlisting}
+
+The script submits fictional complaints and intelligence links through the live APIs. It plants a kingpin, a hidden lieutenant, three cells, and alias variants. The verified demonstration results are approximately:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Scenario} & \textbf{Fragments} & \textbf{Resilience} \\
+\midrule
+Kingpin removed & 3 & 66.3\% \\
+Kingpin and lieutenant removed & 6 & 31.5\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Evidence Locker and Chain of Custody}
+
+\subsection{Upload and verify}
+
+\begin{enumerate}[leftmargin=*]
+  \item Open \textbf{Evidence Locker}.
+  \item Choose \textbf{Seal new evidence} and upload an accepted file type.
+  \item Wait for the anchor status to change from \textbf{Pending} to \textbf{Anchored}.
+  \item Select \textbf{Verify integrity}.
+  \item Confirm that the digest matches and that the custody trail records a pass.
+\end{enumerate}
+
+TRACE hashes the plaintext before encryption, encrypts the exhibit at rest with AES-256-GCM, and anchors the digest through the local EvidenceRegistry contract. The browser does not communicate directly with the blockchain.
+
+\subsection{Tamper demonstration}
+
+The tamper action is for local development and demonstrations only. It requires an administrator and should never be enabled in a production environment.
+
+\begin{enumerate}[leftmargin=*]
+  \item Upload and anchor an exhibit.
+  \item Verify it once and confirm a passing custody entry.
+  \item Sign in as the administrator.
+  \item Use \textbf{Tamper (demo)} on the exhibit and confirm the dialog.
+  \item Verify again.
+  \item Confirm the red integrity failure and the new on-chain mismatch entry.
+\end{enumerate}
+
+The original sealed digest remains unchanged. A substituted exhibit can still decrypt successfully, but its newly computed digest differs from the digest recorded on-chain.
+
+\section{Administration}
+
+Administrators can manage users, inspect service health, rebuild the Neo4j projection, run analytics, and regenerate alerts. Rebuilding Neo4j does not replace PostgreSQL; PostgreSQL remains the source of truth.
+
+Useful maintenance commands include:
+
+\begin{lstlisting}
+cd backend
+npm run compute-scores
+npm run generate-alerts
+npm run project-neo4j
+npm run integrity-sweep
+npm run verify-plant
+\end{lstlisting}
+
+Do not run database reset or determinism verification during a live demonstration. Those commands can replace the current synthetic corpus.
+
+\section{API and Development Reference}
+
+All protected Core API routes require a JWT:
+
+\begin{lstlisting}
+POST /api/auth/login
+GET  /api/complaints
+POST /api/complaints
+GET  /api/entities
+GET  /api/graph/overview
+POST /api/graph/simulate-removal
+POST /api/evidence/upload
+POST /api/evidence/:id/verify
+\end{lstlisting}
+
+The authoritative detailed contract is \pathcode{docs/API.md}. The primary implementation locations are:
+
+\begin{longtable}{p{0.37\textwidth}p{0.48\textwidth}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\pathcode{backend/src/routes/index.js} & Route table and request validation. \\
+\pathcode{backend/src/controllers/complaintsController.js} & Complaint intake and complaint responses. \\
+\pathcode{backend/src/services/normalize.js} & Entity identifier normalization. \\
+\pathcode{backend/src/services/graphAlgos.js} & PageRank, betweenness, components, paths, and simulation. \\
+\pathcode{backend/src/services/graphService.js} & PostgreSQL graph loading, caching, and graph payloads. \\
+\pathcode{backend/src/controllers/evidenceController.js} & Evidence upload, verification, and custody actions. \\
+\pathcode{frontend/src/pages/Complaints.jsx} & Complaint register and New complaint form. \\
+\pathcode{frontend/src/pages/Fragmentation.jsx} & Fragmentation Simulator interface. \\
+\bottomrule
+\end{longtable}
+
+\section{Troubleshooting}
+
+\begin{longtable}{p{0.31\textwidth}p{0.56\textwidth}}
+\toprule
+\textbf{Symptom} & \textbf{Action} \\
+\midrule
+Backend says port 4000 is in use & Reuse the existing healthy API or stop the process that owns port 4000 before starting another copy. \\
+PostgreSQL authentication fails & Confirm the local compose overlay is active and that the backend \pathcode{DATABASE_URL} points to port 5434. \\
+Evidence remains Pending & Start Hardhat, deploy the contract with \pathcode{npm run deploy:local}, and confirm the chain status. \\
+Graph is degraded & Check Neo4j health and the FastAPI \pathcode{/health} endpoint, then run \pathcode{npm run project-neo4j}. \\
+Reference screens say not loaded & Place the required NCRB dataset directory at the repository root and rerun \pathcode{npm run load-reference}. \\
+Frontend shows an API error & Check \pathcode{http://localhost:4000/health}, confirm the user session, and quote the response request ID when reporting the issue. \\
+New complaint fails validation & Provide a victim name, a narrative of at least 10 characters, a valid category, and a non-negative amount. \\
+\bottomrule
+\end{longtable}
+
+\section{Verification and Rehearsal}
+
+Run the focused checks before a demonstration:
+
+\begin{lstlisting}
+cd backend
+npm run test:unit
+npm run evidence-e2e
+npm run seed:innovation
+\end{lstlisting}
+
+For the complete demonstration, follow \pathcode{docs/DEMO_SCRIPT.md}. The recommended order is evidence tamper detection first, followed by the Fragmentation Simulator. Keep the local chain running throughout the rehearsal.
+
+\section{Operational Safety}
+
+\begin{itemize}[leftmargin=*]
+  \item Use synthetic data for demonstrations. Do not place real personal or financial data in this local environment.
+  \item Do not commit \pathcode{backend/.env}, private keys, encryption keys, or JWT secrets.
+  \item Do not enable the tamper endpoint in production.
+  \item Do not deploy the demonstration contract to a public network without an explicit security review.
+  \item Treat centrality, alerts, and extracted entities as investigative leads requiring human verification.
+  \item Preserve the existing authentication, encryption, key rotation, and RBAC boundaries.
+\end{itemize}
+
+\end{document}

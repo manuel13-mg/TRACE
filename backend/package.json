@@ -28,6 +28,7 @@
     "integrity-sweep": "node scripts/integrity-sweep.js",
     "rotate-evidence-key": "node scripts/rotate-evidence-key.js",
     "seed:evidence": "node src/db/seedEvidence.js",
+    "seed:innovation": "node scripts/seed-innovation.js",
     "compute-scores": "node scripts/compute-scores.js",
     "project-neo4j": "node scripts/project-neo4j.js"
   },

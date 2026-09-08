@@ -1,4 +1,4 @@
-# ARGUS — core API
+# TRACE — Threat Relationship Analysis and Connection Engine core API
 
 Express + Postgres. Owns records, auth, evidence and the chain bridge, and
 proxies graph/AI work to the FastAPI intelligence service on `:8000`. The
@@ -21,13 +21,13 @@ npm run dev                   # http://localhost:4000
 
 `npm run setup` is the whole cold start. Individually:
 
-| Command | Does |
-|---|---|
-| `npm run migrate` | Applies pending migrations. Records what ran; refuses to replay. |
-| `npm run seed` | Rebuilds the synthetic corpus — 220 complaints, 962 entities, 3 planted organisations. |
-| `npm run load-reference` | Loads real NCRB statistics into `crime_reference` / `fraud_reference`. |
-| `npm run generate-alerts` | Runs the alert rules over the live data. |
-| `npm run db:reset -- --yes` | Drops everything and re-migrates. Development only. |
+| Command                     | Does                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `npm run migrate`           | Applies pending migrations. Records what ran; refuses to replay.                       |
+| `npm run seed`              | Rebuilds the synthetic corpus — 220 complaints, 962 entities, 3 planted organisations. |
+| `npm run load-reference`    | Loads real NCRB statistics into `crime_reference` / `fraud_reference`.                 |
+| `npm run generate-alerts`   | Runs the alert rules over the live data.                                               |
+| `npm run db:reset -- --yes` | Drops everything and re-migrates. Development only.                                    |
 
 The chain is optional. With no Hardhat node running, uploads still succeed and
 anchors stay `PENDING`; the same is true of the intelligence service, without
@@ -43,14 +43,14 @@ npm run verify-all
 
 Six gates, ~119 assertions. Each answers a question the others do not:
 
-| Gate | Proves |
-|---|---|
-| `test:unit` | Normalisation, graph algorithms, NCRB name mapping and the security helpers, in isolation. No database. |
-| `verify-determinism` | Two seed runs produce byte-identical content. A demo that reshuffles cannot be rehearsed. |
-| `verify-plant` | Centrality genuinely ranks the planted coordinators first — the §T scene 4 claim is earned, not asserted. |
-| `smoke` | Every endpoint in `docs/API.md` answers with the right SHAPE, not just a 200. |
-| `smoke-v2` | The Plan-V2 features, plus **the error paths** — that a bad `?limit=` is a 400 and not a 500. |
-| `evidence-e2e` | Upload → anchor → verify → **tamper** → the failure is permanently on-chain. |
+| Gate                 | Proves                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `test:unit`          | Normalisation, graph algorithms, NCRB name mapping and the security helpers, in isolation. No database.   |
+| `verify-determinism` | Two seed runs produce byte-identical content. A demo that reshuffles cannot be rehearsed.                 |
+| `verify-plant`       | Centrality genuinely ranks the planted coordinators first — the §T scene 4 claim is earned, not asserted. |
+| `smoke`              | Every endpoint in `docs/API.md` answers with the right SHAPE, not just a 200.                             |
+| `smoke-v2`           | The Plan-V2 features, plus **the error paths** — that a bad `?limit=` is a 400 and not a 500.             |
+| `evidence-e2e`       | Upload → anchor → verify → **tamper** → the failure is permanently on-chain.                              |
 
 `verify-determinism` re-seeds, so it runs first and leaves the database in the
 canonical state the rest of the suite expects. The API suites need a running
@@ -126,7 +126,7 @@ to restart the container, so a database blip must not trigger a restart storm.
 `{ ok, data, reason }` and never throws. After three consecutive failures the
 breaker opens, so a dead service costs one timeout rather than one per request —
 without it `POST /api/complaints` would take 8 seconds instead of 200ms while
-FastAPI is stopped, and miss its 3-second budget for being *correctly* optional.
+FastAPI is stopped, and miss its 3-second budget for being _correctly_ optional.
 
 **Evidence downloads are always `application/octet-stream`.** Echoing the
 uploader's declared MIME type would let an uploaded `.html` or `.svg` exhibit

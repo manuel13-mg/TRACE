@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * ARGUS — Dark Intelligence Platform (docs/PROJECT.md §K).
+ * TRACE — Dark Intelligence Platform (docs/PROJECT.md §K).
  *
  * Reference points are Palantir Gotham and Bloomberg terminals, not a SaaS
  * dashboard. Three rules do most of the work here, and each is a deliberate
@@ -52,7 +52,7 @@
 }
 
 /*
- * shadcn's token contract, pointed at the ARGUS palette.
+ * shadcn's token contract, pointed at the TRACE palette.
  *
  * Mapping these rather than restyling each component is what keeps a shadcn
  * Dialog or Select looking like it belongs here without touching its source —

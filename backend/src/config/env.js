@@ -177,5 +177,11 @@ module.exports = {
   // the proxy and one visitor can rate-limit everyone else out of the service.
   trustProxy: process.env.TRUST_PROXY || (isProduction ? '1' : 'loopback'),
 
+  // The demo-only evidence tamper action (POST /api/evidence/:id/tamper). On
+  // by default in development because the hackathon demo is a dev build;
+  // production refuses it unless explicitly switched on, because deliberately
+  // corrupting an exhibit in a real deployment would be an act of destruction.
+  tamperDemoEnabled: (process.env.TAMPER_DEMO_ENABLED ?? (isProduction ? 'false' : 'true')) === 'true',
+
   graphCacheTtlMs: integer('GRAPH_CACHE_TTL_MS', 60_000, { min: 0 }),
 };

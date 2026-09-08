@@ -82,7 +82,7 @@ export default function Login() {
             <span className="text-txt">They are not committed alone.</span>
           </p>
           <p className="mt-3 max-w-[52ch] text-[11.5px] leading-relaxed text-dim">
-            ARGUS correlates identifiers across filings to expose the organisation behind them —
+            TRACE correlates identifiers across filings to expose the organisation behind them —
             and names the coordinator no single victim ever met.
           </p>
         </div>
@@ -97,7 +97,7 @@ export default function Login() {
               <span className="size-[7px] rounded-[1px] bg-blue" />
             </span>
             <div className="flex flex-col">
-              <span className="text-[15px] leading-none font-semibold tracking-[0.16em] text-txt">ARGUS</span>
+              <span className="text-[15px] leading-none font-semibold tracking-[0.16em] text-txt">TRACE</span>
               <span className="mt-1 text-[9px] leading-none tracking-[0.12em] text-faint uppercase">
                 Cybercrime Intelligence Platform
               </span>

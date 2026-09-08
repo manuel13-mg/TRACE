@@ -22,6 +22,7 @@ const pool = require('../db/pool');
 const env = require('../config/env');
 const {
   Graph, influenceScores, shortestPath, connectedComponents, bridgePathsThrough,
+  simulateRemoval: simulateRemovalAlgo,
 } = require('./graphAlgos');
 
 const CACHE_TTL_MS = env.graphCacheTtlMs;
@@ -506,6 +507,21 @@ async function path(fromId, toId) {
 }
 
 /**
+ * Network fragmentation simulation — the innovation layer.
+ *
+ * Runs entirely on a COPY of the cached graph, recomputes components and
+ * influence with the node(s) removed, and reports who takes over. The stored
+ * graph is never touched — this is a simulation, and an analyst must be able to
+ * run it a hundred times without changing the picture anyone else is looking
+ * at. The pure maths lives in graphAlgos.simulateRemoval (unit-tested); this
+ * wrapper only supplies the live graph.
+ */
+async function simulateRemoval(nodeIds) {
+  const { nodes, edges, g } = await load();
+  return simulateRemovalAlgo(g, nodes, edges, nodeIds);
+}
+
+/**
  * Neighbours two nodes have in common — docs/PLAN-V2-DATA-AND-INTEL.md §3.2.
  *
  * The investigator's version of "what do these two have in common": a shared
@@ -721,6 +737,6 @@ async function projectionCorpus() {
 
 module.exports = {
   load, invalidate, overview, neighbors, cluster, nodeIdForEntity,
-  why, path, common, persistScores, projectionCorpus, RISK_WEIGHTS,
+  why, path, common, simulateRemoval, persistScores, projectionCorpus, RISK_WEIGHTS,
   entNodeId, complaintNodeId,
 };

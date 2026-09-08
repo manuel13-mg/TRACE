@@ -234,6 +234,44 @@ router.get('/graph/common',
 
 router.post('/graph/rebuild', writeLimiter, rbac('ADMIN'), graph.rebuild);
 
+// --- innovation layer -----------------------------------------------------
+
+// Fragmentation Simulator. Read-only analysis on a COPY of the graph — one or
+// two node ids, never mutates the stored picture.
+router.post('/graph/simulate-removal',
+  validate({
+    body: z.object({ nodes: z.array(nodeId).min(1).max(2) }),
+  }),
+  graph.simulateRemoval);
+
+// Intelligence-edge write path. The complaint intake API only ever creates
+// REPORTED_IN edges; the coordinator pattern lives in entity_links, and the
+// innovation dataset is seeded through this endpoint rather than by SQL.
+const ENTITY_REF = z.object({
+  type: z.enum(ENTITY_TYPES),
+  value: z.string().trim().min(1).max(255),
+  label: z.string().trim().min(1).max(120).optional(),
+});
+const INTEL_RELATIONSHIPS = ['USES', 'OWNS', 'CONNECTED_TO', 'COMMUNICATED_WITH', 'LOCATED_AT', 'REGISTERED_TO'];
+const INTEL_SOURCES = ['INFERRED', 'INTEL', 'SEIZURE', 'TELCO', 'BANK'];
+
+router.post('/graph/intel-links',
+  writeLimiter,
+  rbac('ADMIN'),
+  validate({
+    body: z.object({
+      links: z.array(z.object({
+        from: ENTITY_REF,
+        to: ENTITY_REF,
+        relationship: z.enum(INTEL_RELATIONSHIPS),
+        weight: z.coerce.number().min(1).max(10).default(1),
+        source: z.enum(INTEL_SOURCES).default('INTEL'),
+        note: z.string().trim().max(300).optional().nullable().transform((v) => v || null),
+      })).min(1).max(200),
+    }),
+  }),
+  graph.intelLinks);
+
 // --- clusters & analytics --------------------------------------------------
 router.get('/clusters', I.listClusters);
 
@@ -362,6 +400,15 @@ router.post('/evidence/:id/verify',
   rbac(...EVIDENCE_ROLES),
   validate({ params: z.object({ id: idParam }) }),
   evidence.verify);
+
+// Demo-only tamper beat: deliberately substitutes the stored exhibit so the
+// next verify FAILS and the failure is recorded on-chain. ADMIN only, and the
+// controller refuses it entirely unless TAMPER_DEMO_ENABLED (dev default).
+router.post('/evidence/:id/tamper',
+  writeLimiter,
+  rbac('ADMIN'),
+  validate({ params: z.object({ id: idParam }) }),
+  evidence.tamper);
 
 router.post('/evidence/:id/anchor',
   writeLimiter,

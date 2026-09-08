@@ -15,7 +15,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Activity, Boxes, CircleAlert, Coins, FileSearch, Gauge, Globe2,
-  History, LogOut, Network, Server, ShieldCheck,
+  History, LogOut, Network, Server, ShieldCheck, Unplug,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -33,6 +33,7 @@ const SECTIONS = [
     label: 'Investigate',
     items: [
       { to: '/network', icon: Network, label: 'Network Explorer' },
+      { to: '/fragmentation', icon: Unplug, label: 'Fragmentation' },
       { to: '/complaints', icon: FileSearch, label: 'Complaints' },
       { to: '/money', icon: Coins, label: 'Money Flow' },
       { to: '/geo', icon: Globe2, label: 'Geo Intelligence' },
@@ -150,9 +151,9 @@ export default function Shell() {
             <span className="size-[6px] rounded-[1px] bg-blue" />
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="text-[13px] leading-none font-semibold tracking-[0.14em] text-txt">ARGUS</span>
+            <span className="text-[13px] leading-none font-semibold tracking-[0.14em] text-txt">TRACE</span>
             <span className="mt-[3px] text-[8.5px] leading-none tracking-[0.1em] text-faint uppercase">
-              Cybercrime Intelligence
+              Threat Relationship Analysis
             </span>
           </div>
         </div>
@@ -205,7 +206,7 @@ export default function Shell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-hair bg-deep px-4">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-[13px] font-medium text-txt">{current?.label ?? 'ARGUS'}</h1>
+            <h1 className="truncate text-[13px] font-medium text-txt">{current?.label ?? 'TRACE'}</h1>
           </div>
           <div className="flex items-center gap-4">
             <ServiceStatus />

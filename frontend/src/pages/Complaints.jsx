@@ -15,9 +15,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, FileSearch, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileSearch, Plus, Search, X } from 'lucide-react';
 
 import { complaints as complaintsApi } from '@/api';
+import { errorMessage } from '@/api/client';
 import { useApi } from '@/hooks/useApi';
 import { Empty, Failed, Loading, Panel } from '@/components/ui/Bits';
 import { ago, inr, num, scamLabel } from '@/utils/format';
@@ -36,6 +37,17 @@ const STATUS_TONE = {
   LINKED: 'text-purple',
   UNDER_INVESTIGATION: 'text-amber',
   CLOSED: 'text-faint',
+};
+
+const EMPTY_FORM = {
+  victim_name: '',
+  victim_phone: '',
+  victim_email: '',
+  narrative: '',
+  scam_category: 'OTHER',
+  amount_inr: '0',
+  state: '',
+  district: '',
 };
 
 /** A compact native select, styled to match the chips rather than the OS. */
@@ -64,6 +76,10 @@ export default function Complaints() {
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(0);
+  const [newComplaintOpen, setNewComplaintOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [submitError, setSubmitError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // 280ms: long enough to swallow a burst of keystrokes, short enough that it
   // still feels like the list is reacting to typing.
@@ -94,6 +110,32 @@ export default function Complaints() {
   const from = page * PAGE_SIZE;
   const shown = data?.complaints?.length ?? 0;
 
+  const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  async function submitComplaint(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await complaintsApi.create({
+        ...form,
+        amount_inr: Number(form.amount_inr || 0),
+        victim_phone: form.victim_phone || null,
+        victim_email: form.victim_email || null,
+        state: form.state || null,
+        district: form.district || null,
+      });
+      setForm(EMPTY_FORM);
+      setNewComplaintOpen(false);
+      setPage(0);
+      refetch();
+    } catch (err) {
+      setSubmitError(errorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-3 p-3">
       <Panel
@@ -103,6 +145,14 @@ export default function Complaints() {
         className="min-h-0 flex-1"
         right={
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setSubmitError(null); setNewComplaintOpen(true); }}
+              className="flex h-[26px] items-center gap-1.5 rounded-[3px] bg-blue px-2.5 text-[11.5px] font-medium text-white transition-colors hover:bg-bluehi"
+            >
+              <Plus className="size-3.5" strokeWidth={2} />
+              New complaint
+            </button>
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-faint" strokeWidth={1.75} />
               <input
@@ -216,6 +266,39 @@ export default function Complaints() {
           )}
         </div>
       </Panel>
+
+      {newComplaintOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <form onSubmit={submitComplaint} className="flex max-h-[calc(100dvh-32px)] w-full max-w-2xl flex-col overflow-auto rounded-[4px] border border-hair bg-panel shadow-2xl">
+            <div className="flex items-center justify-between border-b border-hair px-4 py-3">
+              <div>
+                <h2 className="text-[14px] font-semibold text-txt">New complaint</h2>
+                <p className="mt-0.5 text-[11px] text-faint">Submit a narrative for entity extraction and graph linking.</p>
+              </div>
+              <button type="button" onClick={() => setNewComplaintOpen(false)} title="Close" className="flex size-7 items-center justify-center rounded-[3px] text-faint hover:bg-raise hover:text-txt">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="grid gap-3 p-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-[11px] text-dim">Victim name *<input required value={form.victim_name} onChange={(e) => updateForm('victim_name', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim">Victim phone<input value={form.victim_phone} onChange={(e) => updateForm('victim_phone', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim">Victim email<input type="email" value={form.victim_email} onChange={(e) => updateForm('victim_email', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim">Amount (INR)<input type="number" min="0" value={form.amount_inr} onChange={(e) => updateForm('amount_inr', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim">Scam category<select value={form.scam_category} onChange={(e) => updateForm('scam_category', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue">{CATEGORIES.map((option) => <option key={option} value={option}>{scamLabel(option)}</option>)}</select></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim">State<input value={form.state} onChange={(e) => updateForm('state', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim sm:col-span-2">District<input value={form.district} onChange={(e) => updateForm('district', e.target.value)} className="h-8 rounded-[3px] border border-hair bg-deep px-2 text-[12px] text-txt outline-none focus:border-blue" /></label>
+              <label className="flex flex-col gap-1 text-[11px] text-dim sm:col-span-2">Complaint narrative *<textarea required minLength={10} rows={6} value={form.narrative} onChange={(e) => updateForm('narrative', e.target.value)} placeholder="Describe what happened and include identifiers such as phone numbers, UPI IDs, accounts, wallets, or emails." className="rounded-[3px] border border-hair bg-deep px-2 py-1.5 text-[12px] text-txt outline-none focus:border-blue" /></label>
+            </div>
+
+            {submitError && <p className="mx-4 mb-3 rounded-[3px] border border-danger/30 bg-danger/[0.08] px-3 py-2 text-[11.5px] text-danger">{submitError}</p>}
+            <div className="flex justify-end gap-2 border-t border-hair px-4 py-3">
+              <button type="button" onClick={() => setNewComplaintOpen(false)} className="h-8 rounded-[3px] border border-hair px-3 text-[11.5px] text-dim hover:border-faint hover:text-txt">Cancel</button>
+              <button type="submit" disabled={submitting} className="h-8 rounded-[3px] bg-blue px-3 text-[11.5px] font-medium text-white hover:bg-bluehi disabled:cursor-not-allowed disabled:opacity-50">{submitting ? 'Submitting…' : 'Submit complaint'}</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

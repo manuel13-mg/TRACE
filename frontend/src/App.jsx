@@ -26,7 +26,7 @@ import Admin from '@/pages/Admin';
 import { Spinner } from '@/components/ui/Bits';
 
 /**
- * The Explorer is loaded on demand.
+ * The Explorer and the Fragmentation Simulator are loaded on demand.
  *
  * Cytoscape and its layout engine are ~600 kB, and bundling them into the entry
  * chunk means the LOGIN page downloads a graph library before anyone has
@@ -34,6 +34,7 @@ import { Spinner } from '@/components/ui/Bits';
  * when an investigator actually opens the network.
  */
 const NetworkExplorer = lazy(() => import('@/pages/NetworkExplorer'));
+const Fragmentation = lazy(() => import('@/pages/Fragmentation'));
 
 function PageLoading() {
   return (
@@ -76,6 +77,14 @@ export default function App() {
           element={
             <Suspense fallback={<PageLoading />}>
               <NetworkExplorer />
+            </Suspense>
+          }
+        />
+        <Route
+          path="fragmentation"
+          element={
+            <Suspense fallback={<PageLoading />}>
+              <Fragmentation />
             </Suspense>
           }
         />

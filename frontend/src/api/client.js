@@ -50,7 +50,7 @@ export function errorMessage(err) {
   if (err instanceof ApiError) return err.message;
   // A fetch that never reached the server throws TypeError with a useless
   // message ("Failed to fetch"). Say the useful thing instead.
-  if (err instanceof TypeError) return 'Cannot reach the ARGUS API. Is the server running on :4000?';
+  if (err instanceof TypeError) return 'Cannot reach the TRACE API. Is the server running on :4000?';
   return err.message || 'Something went wrong.';
 }
 

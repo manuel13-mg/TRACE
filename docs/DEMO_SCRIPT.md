@@ -54,7 +54,7 @@ button — it is ADMIN-only by design.
 | 5   | Click **Verify integrity** again.                                                        | **Red verdict: "INTEGRITY FAILED"**, both digests shown side by side (sealed vs recomputed). The custody trail grows entry 2, rendered louder than the pass: **"digest mismatch — exhibit altered at rest"**, permanently on-chain. | "Same file name, same row, decrypts cleanly — and the check fails, because the digest is the one thing that cannot be faked. Now the interesting part: that FAILURE is recorded on the chain, beside the earlier PASS, and neither of us can delete it. The record of the tampering outlives the tampering." |
 | 6   | (optional, strong) Refresh the page and re-open the exhibit.                             | The red **INTEGRITY FAILED** entry is still first-class in the trail.                                                                                                                                                               | "A record that survives even the operator resetting their own database is the only kind worth anything in a custody dispute. That is the entire argument for a chain instead of a table."                                                                                                                    |
 
-**Talking point to land:** _"Anyone can show a hash matching. The claim ARGUS
+**Talking point to land:** _"Anyone can show a hash matching. The claim TRACE
 makes is that a MISMATCH is recorded on the same terms as a match and cannot be
 quietly removed."_
 

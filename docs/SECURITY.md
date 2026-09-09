@@ -1,7 +1,7 @@
 # TRACE — Security Architecture & Threat Model
 
 This document exists to answer one question precisely: **why should anyone
-trust that an ARGUS exhibit hasn't been tampered with, and who could break
+trust that a TRACE exhibit hasn't been tampered with, and who could break
 that trust if they tried?** It covers the evidence encryption pipeline, the
 blockchain chain-of-custody layer, and the auth/access-control surface around
 them — what's mitigated, what's a documented limitation, and why each design
@@ -65,7 +65,7 @@ authTag)` triple copied wholesale from one evidence row onto another still
 - Every upload/verify/download/sweep is written to the append-only
   `audit_logs` table (actor, action, entity, metadata, IP) — this table is
   also what powers the Investigation Timeline page, so an unlogged action is,
-  by ARGUS's own definition, an action that didn't happen as far as
+  by TRACE's own definition, an action that didn't happen as far as
   accountability is concerned.
 
 ## 4. Chain of custody — the trust boundary between the app and the chain
@@ -88,7 +88,7 @@ the AAD mismatch this time rather than a hash mismatch.
 single relayer wallet (`chainService.js`), so `msg.sender` on every
 `registerEvidence`/`logVerification` call is always the relayer address, not
 the individual investigator who actually ran the check. The chain alone
-cannot distinguish which officer performed a given verification. ARGUS
+cannot distinguish which officer performed a given verification. TRACE
 compensates by folding the investigator's identity into the custody note
 itself (`"<result> — verified by <email>"`) before it's written on-chain, so
 per-officer accountability lives inside the immutable trail even though the

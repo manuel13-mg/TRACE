@@ -1,4 +1,4 @@
-# ARGUS — Plan v2: Data Strategy & Intelligence Layer
+# TRACE — Plan v2: Data Strategy & Intelligence Layer
 
 Supplements `docs/PROJECT.md`. Written after auditing `crime-in-india-datasets/`
 and reviewing an alternative architecture proposal. Everything in PROJECT.md
@@ -9,7 +9,7 @@ four investigator features** that survived a feasibility pass.
 
 ## 1. The dataset audit — read this first
 
-I checked every file in `crime-in-india-datasets/` for columns ARGUS could
+I checked every file in `crime-in-india-datasets/` for columns TRACE could
 correlate on. The result decides the whole data strategy.
 
 | Dataset | Rows | What it actually is | Linkable identifiers |
@@ -27,7 +27,7 @@ crime records are not public anywhere in the world, for obvious legal reasons.
 ### What this means
 
 > **These datasets cannot power the Criminal Network Explorer, mastermind
-> detection, or money-flow tracing.** Those three features are ARGUS. They need
+> detection, or money-flow tracing.** Those three features are TRACE. They need
 > identifiers that recur across complaints; there is nothing here to recur.
 
 A second finding matters for honesty: `crime_dataset_india.csv` is **itself
@@ -124,7 +124,7 @@ Reviewed against our 5-day runway and our actual problem statement. These four
 earn their place:
 
 ### 3.1 Explainability — "why is this person flagged?" ⭐ highest value
-When ARGUS names a coordinator it must show its working. We already compute
+When TRACE names a coordinator it must show its working. We already compute
 betweenness; the paths that produce it are recoverable.
 
 `GET /api/entities/:id/why` returns:
@@ -195,7 +195,7 @@ Stated with reasons, so the decisions are reviewable rather than silent.
 
 **Ports — resolved.** The scrapped TRINETRA stack has been shut down: backend
 (:4000), risk engine (:8000), the `trinetra-postgres` container, and a stale
-Hardhat node holding :8545. ARGUS now runs on the conventional ports — API
+Hardhat node holding :8545. TRACE now runs on the conventional ports — API
 **:4000**, Postgres **:5432**, Neo4j **:7474 / :7687**, chain **:8545**. Nothing
 was deleted; `docker start trinetra-postgres` restores that stack with its volume
 intact if it is ever wanted again.
@@ -238,7 +238,7 @@ ids so it fails only for reasons that matter.
    ethers `Result` objects, so the timestamp read back as a function. Renamed to
    `checkedAt`.
 2. `intelClient` treated any HTTP 200 on :8000 as "intel-service up" — and the
-   leftover TRINETRA risk engine was answering there. ARGUS would have posted
+  leftover TRINETRA risk engine was answering there. TRACE would have posted
    extraction requests to another project's service. It now verifies the
    reported service identity.
 3. Two seeded topologies ranked a mule account above the coordinator.
@@ -307,13 +307,13 @@ Day 5 afternoon stays frozen for rehearsal.
 
 Two additions to the eight scenes in PROJECT.md §T:
 
-- **Scene 4 becomes the strongest moment.** After ARGUS names the coordinator,
+- **Scene 4 becomes the strongest moment.** After TRACE names the coordinator,
   click **"Why?"** — the bridge paths render, the removal test shows the cluster
   fragmenting into three, and the counter reads *named in 0 complaints*. That is
   explainable AI demonstrated, not asserted.
 - **New Scene 3.5 — the honesty beat.** Toggle the Geo page to the NCRB layer.
   *"This layer is real: NCRB district cheating cases, 2014. The network layer is
-  synthetic, because entity-level data is not public. Point ARGUS at NCRP and
+  synthetic, because entity-level data is not public. Point TRACE at NCRP and
   the architecture is unchanged."* Judges consistently reward a team that draws
   this line before being asked.
 

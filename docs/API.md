@@ -193,7 +193,7 @@ the frontend may cache on it.
 
 ### Reference data — NCRB · OFFICIAL (PLAN-V2 §2)
 
-Layer 1: the only genuinely official data in ARGUS. Aggregate case counts per
+Layer 1: the only genuinely official data in TRACE. Aggregate case counts per
 district per year, 2001–2014. **Every response carries `provenance: "NCRB · OFFICIAL"`
 and a `source_note`, and the UI must render both.** These are counts of recorded
 cases, not individuals; they name nobody and cannot be correlated. What they are

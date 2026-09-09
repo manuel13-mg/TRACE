@@ -147,11 +147,10 @@ upload → server hashes plaintext correctly → anchor starts PENDING
 → ANALYST gets 403 on raw evidence download (RBAC intact)
 ```
 
-The **UI already has** upload / verify / custody-trail (failures rendered louder
-than passes) in `EvidenceLocker`. What is **not** in the UI: the _tamper_ step
-itself — the e2e script writes the substitution directly. That is the gap the
-demo script closes (a dev-gated ADMIN "simulate tamper" action so the whole
-cycle is clickable on screen).
+The **UI has** upload / verify / custody-trail (failures rendered louder than
+passes) in `EvidenceLocker`, plus a development-only ADMIN "Tamper (demo)"
+action. The e2e script remains useful as an automated proof, while the UI
+provides the click-through demonstration path.
 
 ## 5. Frontend state: 13 pages, all wired to real data
 
@@ -162,10 +161,9 @@ Admin. Design system is hand-rolled shadcn-flavoured Tailwind (components/ui),
 with shared `Bits`, `format.js` (cluster colours stable across pages), `api/`
 (named functions per endpoint), `hooks/useApi`.
 
-**The Fragmentation Simulator does not exist yet** — backend or frontend. The
-closest existing capability is the single-node _removal test_ inside
-`/api/graph/why/:nodeId` (scoped to one node's own cluster), which is exactly
-the right foundation to generalise.
+The Fragmentation Simulator is implemented in both the backend and frontend.
+It generalizes the single-node removal test from `/api/graph/why/:nodeId` to
+one- or two-node simulations over a copy of the cached graph.
 
 ---
 
@@ -173,9 +171,9 @@ the right foundation to generalise.
 
 | #   | Brief item                          | Status     | Action                                                                                                                                                                                                                        |
 | --- | ----------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Fragmentation Simulator backend     | ❌ missing | `POST /api/graph/simulate-removal` on the existing cached graph, on a copy, no mutation                                                                                                                                       |
-| 2   | Fragmentation Simulator frontend    | ❌ missing | New page: click node → simulate → fragmented re-render + plain-language summary; combined 2-node strike                                                                                                                       |
-| 3   | Kingpin + hidden-lieutenant pattern | ⚠️ partial | Seed plants 3 masterminds (Vikram Rathore / Imran Sheikh / Farhan Khan) but **no lieutenant**; no alias pairs either                                                                                                          |
-| 4   | Seed through the live ingestion API | ⚠️ partial | `seed.js` writes directly to Postgres (by design, 220-complaint corpus); complaint intake API exists but there is **no API for intelligence edges** (entity_links) or transactions — needed to plant an invisible coordinator |
-| 5   | Tamper-detection clickable in UI    | ⚠️ partial | Verify + custody trail in UI; tamper step is CLI-only                                                                                                                                                                         |
-| 6   | NCRB reference layer                | ⚠️ gap     | dataset absent from machine; documented, non-blocking                                                                                                                                                                         |
+| 1   | Fragmentation Simulator backend     | ✅ complete | `POST /api/graph/simulate-removal` uses the cached graph, operates on a copy, and reports fragments, resilience, and the successor node |
+| 2   | Fragmentation Simulator frontend    | ✅ complete | `/fragmentation` supports node selection, before/after rendering, plain-language summaries, and combined two-node removal |
+| 3   | Kingpin + hidden-lieutenant pattern | ✅ complete | `seed:innovation` plants the DELTA topology, alias variants, Karan Malhotra, and Sana Qureshi |
+| 4   | Seed through the live ingestion API | ✅ complete | Complaints use `POST /api/complaints`; intelligence relationships use `POST /api/graph/intel-links` |
+| 5   | Tamper-detection clickable in UI    | ✅ complete | Evidence Locker provides the development-only ADMIN tamper action, verification, and custody trail |
+| 6   | NCRB reference layer                | ⚠️ gap     | Dataset absent from this machine; loader and UI fallback are implemented and documented |

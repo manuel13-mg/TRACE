@@ -58,9 +58,9 @@ hundreds of filings. The consequences:
 4. **Evidence integrity is unprovable.** A screenshot on a shared drive has no
    demonstrable chain of custody when it reaches court.
 
-## §C. What ARGUS does
+## §C. What TRACE does
 
-ARGUS reframes the unit of investigation from **the complaint** to **the network**.
+TRACE reframes the unit of investigation from **the complaint** to **the network**.
 
 ```
    Complaint filed
@@ -80,7 +80,7 @@ ARGUS reframes the unit of investigation from **the complaint** to **the network
    Evidence integrity anchored on-chain                     (EvidenceRegistry.sol)
 ```
 
-**ARGUS is an intelligence and investigation platform, not a complaint
+**TRACE is an intelligence and investigation platform, not a complaint
 management portal.** Nothing in it exists to help a victim file a complaint;
 everything in it exists to help an investigator find the organisation behind
 a hundred of them.
@@ -90,7 +90,7 @@ is genuinely live and what is computed from seeded data.
 
 ## §D. Users
 
-| User                                | What they need from ARGUS                                                          |
+| User                                | What they need from TRACE                                                          |
 | ----------------------------------- | ---------------------------------------------------------------------------------- |
 | **Cyber Crime Police Investigator** | Find every complaint linked to the one on their desk; identify who to arrest first |
 | **MHA Analyst**                     | National-level view of which networks are growing and where                        |
@@ -512,7 +512,7 @@ SIH 21689/
 **🔨 Built (Day 0 complete):**
 
 - Directory scaffold and module copy pass from the prior codebase
-- `backend/src/config/env.js` + `.env.example` — retargeted to ARGUS
+- `backend/src/config/env.js` + `.env.example` — runtime configuration for TRACE
 - **Full Postgres schema** — 13 tables, constraints, indexes
 - `docker-compose.yml` — Postgres 16 + Neo4j 5 Community, both with healthchecks
 - **`docs/API.md`** — the frozen contract, all endpoints and payload shapes
@@ -786,7 +786,7 @@ upload must succeed, the anchor must stay `PENDING`, and nothing may hang.
 
 ## §W. Judging alignment
 
-| SIH criterion                | Where ARGUS answers it                                                                           |
+| SIH criterion                | Where TRACE answers it                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------------ |
 | **Novelty**                  | Network-first investigation instead of case-first; mastermind ranking from graph topology        |
 | **Technical depth**          | Real graph DB, two-tier NLP, Louvain + PageRank, custom Solidity with append-only custody        |
